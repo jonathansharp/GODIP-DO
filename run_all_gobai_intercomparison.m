@@ -1,11 +1,5 @@
-% make sure working directory is correct
-cd /raid/sharp/matlab/O2_Intercomparison
-
 % set limits (global, 2004 to present)
-latlim=[-90 90];
-lonlim=[-180 180];
-y1 = 1965;
-y2 = 2023;
+y1 = 1965; y2 = 2023;
 
 % Import data
 wod = process_WOD_profile_data(y1,y2);
