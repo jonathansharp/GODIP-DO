@@ -36,7 +36,7 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
+save([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
 % display information
 disp(['data assigned to ' num2str(num_clusters) ' clusters on ' base_grid]);

@@ -52,6 +52,7 @@ for y = y1:y2
             for v = 1:length(vars_both)
                 all_data.(vars_both{v}) = [all_data.(vars_both{v});all_data_temp.(vars_both{v})(idx)];
             end
+            % type: CTD=1 OSD=2 PFL=3
             all_data.type = [all_data.type;repmat(x,sum(idx(:)),1)];
         end
     end
@@ -72,6 +73,33 @@ date0(:,2:3) = 0;
 all_data.day_of_year = datenum(date) - datenum(date0);
 all_data.day_sin = sin((2.*pi.*all_data.day_of_year)/365.25);
 all_data.day_cos = cos((2.*pi.*all_data.day_of_year)/365.25);
+
+% calculate float oxygen saturation
+Ts = log((298.15 - all_data.Temperature)./(273.15 + all_data.Temperature)); 
+% The coefficents below are from the second column of Table 1 of Garcia and
+% Gordon (1992)
+a0 =  5.80871; a1 =  3.20291; a2 =  4.17887; a3 =  5.10006;
+a4 = -9.86643e-2; a5 =  3.80369; b0 = -7.01577e-3; b1 = -7.70028e-3;
+b2 = -1.13864e-2; b3 = -9.51519e-3; c0 = -2.75915e-7;
+all_data.Oxygen_sat = exp(a0 + Ts.*(a1 + Ts.*(a2 + Ts.*(a3 + Ts.*(a4 + a5*Ts)))) + ...
+      all_data.Salinity.*(b0 + Ts.*(b1 + Ts.*(b2 + b3*Ts)) + c0*all_data.Salinity));
+all_data.Oxygen_sat_per = 100.*(all_data.Oxygen./all_data.Oxygen_sat);
+all_data.Oxygen_uncorrected = all_data.Oxygen;
+
+% index to float data
+idx_float = all_data.type == 3;
+
+% adjust float data according to GOBAI-O2 float correction (July)
+% load('/home/sockeye/sharp/GOBAI/O2/Data/float_corr_Jul-2025_D');
+% all_data.Oxygen(idx_float) = double(((all_data.Oxygen_sat_per(idx_float) - ...
+%     (slp .* all_data.Oxygen_sat(idx_float) + int))./100) .* ...
+%     all_data.Oxygen_sat(idx_float));
+
+% remove float data for test with ship data only
+% vars = fieldnames(all_data);
+% for v = 1:length(vars)
+%     all_data.(vars{v})(idx_float) = [];
+% end
 
 % save data
 save(['O2/Data/wod_data_' num2str(y1) '_' num2str(y2)],'all_data','-v7.3');

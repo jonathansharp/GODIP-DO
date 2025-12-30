@@ -81,7 +81,7 @@ elseif strcmp(alg_type,'GBM')
 end
 
 %% load combined data
-load(['wod_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+load(['O2/Data/wod_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
 
 %% load data clusters
 load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
@@ -139,49 +139,38 @@ if num_folds > 1
 end
 
 %% fit algorithms
-% 
-% % start timing training
-% tStart = tic;
-% 
-% % parameter that matches fold number with cluster number
-% folds = repelem(1:num_folds,1,num_clusters)';
-% clusters = repmat(1:num_clusters,1,num_folds)';
-% 
-% 
-% % fit models
-% % if num_folds == 1 & strcmp(alg_type,'FFNN')
-% %     for cnt = 1:num_folds*num_clusters
-% %         train_models(param_props,num_folds,...
-% %             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-% %             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-% %             numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
-% %             folds(cnt),clusters(cnt));
-% %     end
-% % else
-%     % set up parallel pool
-%     %tic; parpool(num_folds*num_clusters); fprintf('Pool initiation: '); toc;
-%     for cnt = 1:num_folds*num_clusters
-%         train_models(param_props,num_folds,...
-%             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-%             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-%             numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
-%             folds(cnt),clusters(cnt));
-%     end
-% % end
-% 
-% % end parallel session
-% delete(gcp('nocreate'));
-% 
-% % stop timing full script
-% if num_folds > 1
-%     fprintf([alg_type ' k-Fold Training: ']);
-% else
-%     fprintf([alg_type ' Training: ']);
-% end
-% 
-% % print elapsed time in minutes
-% tElapsed = toc(tStart);
-% disp(['Elapsed time is ' num2str(tElapsed/60) ' minutes.'])
+
+% start timing training
+tStart = tic;
+
+% parameter that matches fold number with cluster number
+folds = repelem(1:num_folds,1,num_clusters)';
+clusters = repmat(1:num_clusters,1,num_folds)';
+
+
+% fit models
+tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+for cnt = 1:num_folds*num_clusters
+    train_models(param_props,num_folds,...
+        alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+        train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+        numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
+        folds(cnt),clusters(cnt));
+end
+
+% end parallel session
+delete(gcp('nocreate'));
+
+% stop timing full script
+if num_folds > 1
+    fprintf([alg_type ' k-Fold Training: ']);
+else
+    fprintf([alg_type ' Training: ']);
+end
+
+% print elapsed time in minutes
+tElapsed = toc(tStart);
+disp(['Elapsed time is ' num2str(tElapsed/60) ' minutes.'])
 
 %% calculate statistics for k-fold test
 if num_folds > 1

@@ -1,17 +1,20 @@
 % analyze DOMIP
 
 %% define filenames
-gobai_filename = '/fast4/o2/domip/GOBAI/EN4/FFNN/c15_Jan-2025_D/train80_val10_test10/gobai-o2.nc';
+gobai_filename_no_correction = '/fast4/o2/domip/GOBAI/EN4/FFNN/c15_Jul-2025_D_no_correction_10percent/train80_val10_test10/gobai-o2.nc';
+gobai_filename_with_correction100 = '/fast4/o2/domip/GOBAI/EN4/FFNN/c15_Jul-2025_D/train80_val10_test10/gobai-o2.nc';
+gobai_filename_with_correction = '/fast4/o2/domip/GOBAI/EN4/FFNN/c15_Jul-2025_D_with_correction_10percent/train80_val10_test10/gobai-o2.nc';
+gobai_filename_ship_only = '/fast4/o2/domip/GOBAI/EN4/FFNN/c15_Jul-2025_D_ship_only_10percent/train80_val10_test10/gobai-o2.nc';
 gt_filename = '/fast4/o2/domip/O2map_v2.2.G.4.6.4.nc';
 woa_filename = '/fast4/o2/woa23_all_o00_01.nc';
 
 %% import mean climatologies
 % load gobai dimensions
-gobai.lon = ncread(gobai_filename,'lon');
+gobai.lon = ncread(gobai_filename_with_correction,'lon');
 gobai.lon = convert_lon(gobai.lon,'-180-180');
-gobai.lat = ncread(gobai_filename,'lat');
-gobai.depth = ncread(gobai_filename,'depth');
-gobai.time = ncread(gobai_filename,'time');
+gobai.lat = ncread(gobai_filename_with_correction,'lat');
+gobai.depth = ncread(gobai_filename_with_correction,'depth');
+gobai.time = ncread(gobai_filename_with_correction,'time');
 
 % load gt dimensions
 gt.lon = ncread(gt_filename,'lon');
@@ -26,7 +29,7 @@ woa.depth = ncread(woa_filename,'depth');
 woa.o2 = ncread(woa_filename,'o_an');
 
 % calculate long-term gobai mean
-gobai.o2 = ncread(gobai_filename,'o2');
+gobai.o2 = ncread(gobai_filename_with_correction,'o2');
 gobai.mean_o2 = mean(gobai.o2,4,'omitnan');
 gobai = rmfield(gobai,'o2');
 
@@ -204,22 +207,41 @@ hh = diff(gobai.depth);
 hh(end) = [];
 hh = repmat(permute(hh(idx_depth),[3 2 1]),length(gobai.lon),length(gobai.lat),1);
 vol = area.*hh;
-% calculate gobai o2 timeseries
-gobai.o2 = ncread(gobai_filename,'o2',[1 1 1 1],[Inf Inf sum(idx_depth) Inf]);
-gobai_o2_ts = nan(length(gobai.time),1);
+% calculate gobai o2 timeseries (no correction)
+gobai_no_corr.o2 = ncread(gobai_filename_no_correction,'o2',[1 1 1 1],[Inf Inf sum(idx_depth) Inf]);
+gobai_no_corr_o2_ts = nan(length(gobai.time),1);
+gobai_with_corr.o2100 = ncread(gobai_filename_with_correction100,'o2',[1 1 1 1],[Inf Inf sum(idx_depth) Inf]);
+gobai_with_corr_o2_ts100 = nan(length(gobai.time),1);
+gobai_with_corr.o2 = ncread(gobai_filename_with_correction,'o2',[1 1 1 1],[Inf Inf sum(idx_depth) Inf]);
+gobai_with_corr_o2_ts = nan(length(gobai.time),1);
+gobai_no_float.o2 = ncread(gobai_filename_ship_only,'o2',[1 1 1 1],[Inf Inf sum(idx_depth) Inf]);
+gobai_no_float_o2_ts = nan(length(gobai.time),1);
 for t = 1:length(gobai.time)
-    o2_temp = gobai.o2(:,:,:,t);
+    o2_temp = gobai_no_corr.o2(:,:,:,t);
     idx = ~isnan(o2_temp);
-    gobai_o2_ts(t) = sum(o2_temp(idx).*vol(idx))./sum(vol(idx));
+    gobai_no_corr_o2_ts(t) = sum(o2_temp(idx).*vol(idx))./sum(vol(idx));
+    o2_temp = gobai_with_corr.o2(:,:,:,t);
+    idx = ~isnan(o2_temp);
+    gobai_with_corr_o2_ts(t) = sum(o2_temp(idx).*vol(idx))./sum(vol(idx));
+    o2_temp = gobai_with_corr.o2100(:,:,:,t);
+    idx = ~isnan(o2_temp);
+    gobai_with_corr_o2_ts100(t) = sum(o2_temp(idx).*vol(idx))./sum(vol(idx));
+    o2_temp = gobai_no_float.o2(:,:,:,t);
+    idx = ~isnan(o2_temp);
+    gobai_no_float_o2_ts(t) = sum(o2_temp(idx).*vol(idx))./sum(vol(idx));
 end
 % plot figure
 figure; hold on;
 set(gcf,'position',[100 100 800 400]);
 title('Average [O_{2}] (0-700m)');
 plot(double(datenum(1965,1,1)+gt.time),gt_o2_ts,'LineWidth',2);
-plot(double(datenum(1950,1,1)+gobai.time),gobai_o2_ts,'LineWidth',2);
+plot(double(datenum(1950,1,1)+gobai.time),gobai_no_corr_o2_ts,'LineWidth',2);
+plot(double(datenum(1950,1,1)+gobai.time),gobai_with_corr_o2_ts,'LineWidth',2);
+plot(double(datenum(1950,1,1)+gobai.time),gobai_with_corr_o2_ts100,'LineWidth',2);
+plot(double(datenum(1950,1,1)+gobai.time),gobai_no_float_o2_ts,'LineWidth',2);
 datetick('x');
 ylabel('[O_{2}] (\mumol kg^{-1})');
+legend({'GT' 'UW (no adjustment)' 'UW (w/ adjustment)' 'UW (w/ adjustment 100)' 'UW (no float data)'})
 export_fig(gcf,'O2/Figures/timeseries_comparisons.png','-transparent');
 close
 

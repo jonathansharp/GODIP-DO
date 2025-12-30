@@ -1,5 +1,5 @@
-function gmm_clustering(param_props,temp_path,sal_path,base_grid,start_year,end_year,snap_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path,varargin)
+function gmm_clustering(param_props,fpaths,base_grid,start_year,end_year,snap_date,...
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict,varargin)
 
 %% process optional input arguments
 % pre-allocate
@@ -15,56 +15,44 @@ end
 date_str = num2str(snap_date);
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 
-%% check for existence of model
-if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
+%% load basin mask file
 
-    %% load basin mask file
-    
-    
-    %% load data
-    load(['O2/Data/wod_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
-    
-    %% fit GMM from data points themselves
-    tic
-    % transform to normalized arrays
-    idx = false(length(all_data.Temperature),1);
-    for v = 1:length(clust_vars)
-        idx = idx | ~isnan(all_data.(clust_vars{v}));
-    end
-    predictor_matrix = [];
-    for v = 1:length(clust_vars)
-        predictor_matrix = [predictor_matrix all_data.(clust_vars{v})];
-    end
-    [X_norm,C,S] = normalize(predictor_matrix);
-    % reduce inputs for model training to 100,000 random data points
-    idx_rand = randperm(length(X_norm),100000)';
-    X_norm = X_norm(idx_rand,:);
-    % fit GMM
-    options = statset('MaxIter',1000); % increase max iterations to ensure convergence
-    gmm = fitgmdist(X_norm,num_clusters,...
-        'Options',options,...
-        'CovarianceType','diagonal',...
-        'SharedCovariance',true,'Replicates',10);
-    % save GMM model
-    if ~isfolder([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)])
-        mkdir([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
-    end
-    save([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
-        'gmm','num_clusters','C','S','-v7.3');
-    clear gmm C S
-    toc
 
-else
+%% load data
+load(['O2/Data/wod_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
 
-    % display information
-    disp(['already trained GMM for ' num2str(num_clusters) ...
-        ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
-
+%% fit GMM from data points themselves
+tic
+% transform to normalized arrays
+idx = false(length(all_data.Temperature),1);
+for v = 1:length(clust_vars)
+    idx = idx | ~isnan(all_data.(clust_vars{v}));
 end
-
+predictor_matrix = [];
+for v = 1:length(clust_vars)
+    predictor_matrix = [predictor_matrix all_data.(clust_vars{v})];
+end
+[X_norm,C,S] = normalize(predictor_matrix);
+% reduce inputs for model training to 100,000 random data points
+idx_rand = randperm(length(X_norm),100000)';
+X_norm = X_norm(idx_rand,:);
+% fit GMM
+options = statset('MaxIter',1000); % increase max iterations to ensure convergence
+gmm = fitgmdist(X_norm,num_clusters,...
+    'Options',options,...
+    'CovarianceType','diagonal',...
+    'SharedCovariance',true,'Replicates',10);
+% save GMM model
+if ~isfolder([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)])
+    mkdir([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
+end
+save([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+    'gmm','num_clusters','C','S','-v7.3');
+clear gmm C S
+toc
 
 %% assign grid cells and probabilities to clusters
-folder_name = [param_path 'GMM_' base_grid '_' num2str(num_clusters)];
+folder_name = [fpaths.param_path 'GMM_' base_grid '_' num2str(num_clusters)];
 % determine length of cluster file if it exists
 if exist([folder_name '/clusters.nc'],'file') == 2
     inf = ncinfo([folder_name '/clusters.nc']);
@@ -80,93 +68,81 @@ end
 % length_expt = (year-start_year)*12 + month;
 length_expt = (end_year-start_year)*12 + 12;
 
-%% check for existence of cluster file and length of cluster grids
-if ~isfile([folder_name '/clusters.nc']) || ...
-        inf.Dimensions(time_idx).Length ~= length_expt
+% delete file if it exists
+if exist([folder_name '/clusters.nc'],'file') == 2
+    delete([folder_name '/clusters.nc']);
+end
 
-    % delete file if it exists
-    if exist([folder_name '/clusters.nc'],'file') == 2
-        delete([folder_name '/clusters.nc']);
+% start timing cluster assignment
+tic
+
+% %% create netCDF file that will be end result
+TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
+% create file
+create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+
+% load GMM model
+load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
+    date_str],'gmm','C','S');
+
+% set up parallel pool
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+
+%% assign clusters for each timestep
+parfor t = 1:TS.tdim
+
+    % load dimensions
+    TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
+
+    % get salinity and temperature
+    TS.Temperature = ncread([fpaths.temp_path 'EN.4.2.2.f.analysis.c14.' ...
+        num2str(TS.years(t)) sprintf('%02d',TS.months(t)) '.nc'],...
+        'temperature');
+    TS.Salinity = ncread([fpaths.temp_path 'EN.4.2.2.f.analysis.c14.' ...
+        num2str(TS.years(t)) sprintf('%02d',TS.months(t)) '.nc'],...
+        'salinity');
+    TS.depth = double(repmat(permute(TS.Depth,[3 2 1]),length(TS.Longitude),...
+        length(TS.Latitude)));
+
+    % transform to normalized arrays
+    idx = ~isnan(TS.Temperature) & ~isnan(TS.Salinity);
+    predictor_matrix = [];
+    for v = 1:length(clust_vars)
+        predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
     end
+    X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
 
-    % start timing cluster assignment
-    tic
-    
-    % %% create netCDF file that will be end result
-    TS = load_EN4_dim(temp_path,start_year,end_year);
-    % create file
-    create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
-
-    % load GMM model
-    load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
-        date_str],'gmm','C','S');
-
-    % set up parallel pool
-    tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
-
-    %% assign clusters for each timestep
-    parfor t = 1:TS.tdim
-
-        % load dimensions
-        TS = load_EN4_dim(temp_path,start_year,end_year);
-
-        % get salinity and temperature
-        TS.Temperature = ncread([temp_path 'EN.4.2.2.f.analysis.c14.' ...
-            num2str(TS.years(t)) sprintf('%02d',TS.months(t)) '.nc'],...
-            'temperature');
-        TS.Salinity = ncread([temp_path 'EN.4.2.2.f.analysis.c14.' ...
-            num2str(TS.years(t)) sprintf('%02d',TS.months(t)) '.nc'],...
-            'salinity');
-        TS.depth = double(repmat(permute(TS.Depth,[3 2 1]),length(TS.Longitude),...
-            length(TS.Latitude)));
-
-        % transform to normalized arrays
-        idx = ~isnan(TS.Temperature) & ~isnan(TS.Salinity);
-        predictor_matrix = [];
-        for v = 1:length(clust_vars)
-            predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
-        end
-        X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
-
-        % assign data points to clusters
-        assign_to_gmm_clusters(TS,base_grid,gmm,num_clusters,idx,X_norm,t,folder_name);
-
-    end
-
-    % end parallel session
-    delete(gcp('nocreate'));
-
-    %% concatenate cluster information in main file
-    for t = 1:TS.tdim
-        % define file names
-        filename = [folder_name '/clusters.nc'];
-        filename_temp = [folder_name '/clust_' num2str(t) '.nc'];
-        % read information from temporary file and write it to main file
-        time = ncread(filename_temp,'time'); % read
-        ncwrite(filename,'time',time,t); % write
-        GMM_clusters = ncread(filename_temp,'GMM_clusters'); % read
-        ncwrite(filename,'clusters',GMM_clusters,[1 1 1 t]); % write
-        for c = 1:num_clusters
-            GMM_cluster_probs = ncread(filename_temp,...
-                ['GMM_cluster_probs_' num2str(c)]); % read
-            ncwrite(filename,['cluster_probs_c' num2str(c)],...
-                GMM_cluster_probs,[1 1 1 t]); % write
-        end
-        % delete temporary file
-        delete(filename_temp);
-    end
-    
-    % display information
-    toc
-    disp([num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
-
-else
-
-    % display information
-    disp(['already used ' base_grid ' grid to form ' num2str(num_clusters) ...
-        ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
+    % assign data points to clusters
+    assign_to_gmm_clusters(TS,base_grid,gmm,num_clusters,idx,X_norm,t,folder_name);
 
 end
+
+% end parallel session
+delete(gcp('nocreate'));
+
+%% concatenate cluster information in main file
+for t = 1:TS.tdim
+    % define file names
+    filename = [folder_name '/clusters.nc'];
+    filename_temp = [folder_name '/clust_' num2str(t) '.nc'];
+    % read information from temporary file and write it to main file
+    time = ncread(filename_temp,'time'); % read
+    ncwrite(filename,'time',time,t); % write
+    GMM_clusters = ncread(filename_temp,'GMM_clusters'); % read
+    ncwrite(filename,'clusters',GMM_clusters,[1 1 1 t]); % write
+    for c = 1:num_clusters
+        GMM_cluster_probs = ncread(filename_temp,...
+            ['GMM_cluster_probs_' num2str(c)]); % read
+        ncwrite(filename,['cluster_probs_c' num2str(c)],...
+            GMM_cluster_probs,[1 1 1 t]); % write
+    end
+    % delete temporary file
+    delete(filename_temp);
+end
+
+% display information
+toc
+disp([num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
 
 end
 
