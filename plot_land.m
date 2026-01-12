@@ -1,5 +1,5 @@
 % plot land areas
-function plot_land(type)
+function plot_land(type,clr)
 
 if strcmp(type,'xy')
 
@@ -9,12 +9,12 @@ if strcmp(type,'xy')
     for l = 1:length(land)
         land(l).X = land(l).X+360;
     end
-    mapshow(land,'FaceColor',rgb('grey'));
+    mapshow(land,'FaceColor',clr);
 
 elseif strcmp(type,'map')
 
     land = shaperead('landareas', 'UseGeoCoords',true);
-    geoshow(land,'FaceColor',rgb('grey'));
+    geoshow(land,'FaceColor',clr);
 
 end
 
