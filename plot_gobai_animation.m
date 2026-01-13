@@ -5,7 +5,7 @@ function plot_gobai_animation(param_props,param_path,base_grid,num_clusters,...
     alg_type,file_date,float_file_ext,numWorkers_predict,varargin)
 
 %% set depths
-depths = [100];
+depths = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
 %% set delay time
 if strcmp(base_grid,'RFROM')
@@ -56,10 +56,10 @@ else
 end
 
 %% set up parallel pool
-%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-for d = 1:length(depths)
+parfor d = 1:length(depths)
     % create folder for figures
     dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -136,8 +136,8 @@ for d = 1:length(depths)
             mkdir([dname '/' num2str(depths(d)) 'dbars']);
         end
         % save frame
-        % export_fig(h,[dname '/' num2str(depths(d)) ...
-        %     'dbars/t' num2str(t) '.png'],'-transparent','-silent');
+        export_fig(h,[dname '/' num2str(depths(d)) ...
+            'dbars/t' num2str(t) '.png'],'-transparent','-silent');
         % % capture frame
         % frame = getframe(h);
         % im = frame2im(frame);

@@ -1,7 +1,7 @@
 function all_data = process_WOD_profile_data(y1,y2)
 
 % load WOD profile data
-folder = 'WOD_Profiles_data';
+folder = 'WOD25_Profiles_Data';
 types = {'CTD' 'OSD' 'PFL'};
 
 % for oxygen
@@ -14,7 +14,7 @@ all_data.type = [];
 % load oxygen variables
 for y = y1:y2
     for x = 1:length(types)
-        file = [folder '/Oxygen_' types{x} '_NCEI/Oxygen_' types{x} '_' num2str(y) '.nc'];
+        file = [folder '/Oxygen_' types{x} '_WOD25/Oxygen_' types{x} '_' num2str(y) '.nc'];
         if exist(file,'file')
             schema = ncinfo(file);
             pdim = schema.Dimensions(1).Length;
@@ -24,11 +24,11 @@ for y = y1:y2
                 all_data_temp.(vars_o2{v}) = ncread(file,vars_o2{v});
             end
             % temp
-            file = [folder '/Temperature_' types{x} '_NCEI/Temperature_' types{x} '_' num2str(y) '.nc'];
+            file = [folder '/Temperature_' types{x} '_WOD25/Temperature_' types{x} '_' num2str(y) '.nc'];
             all_data_temp.Temperature = ncread(file,'Temperature');
             all_data_temp.temp_profile = ncread(file,'profile');
             % sal
-            file = [folder '/Salinity_' types{x} '_NCEI/Salinity_' types{x} '_' num2str(y) '.nc'];
+            file = [folder '/Salinity_' types{x} '_WOD25/Salinity_' types{x} '_' num2str(y) '.nc'];
             all_data_temp.Salinity = ncread(file,'Salinity');
             all_data_temp.sal_profile = ncread(file,'profile');
             % indices
@@ -90,10 +90,10 @@ all_data.Oxygen_uncorrected = all_data.Oxygen;
 idx_float = all_data.type == 3;
 
 % adjust float data according to GOBAI-O2 float correction (July)
-% load('/home/sockeye/sharp/GOBAI/O2/Data/float_corr_Jul-2025_D');
-% all_data.Oxygen(idx_float) = double(((all_data.Oxygen_sat_per(idx_float) - ...
-%     (slp .* all_data.Oxygen_sat(idx_float) + int))./100) .* ...
-%     all_data.Oxygen_sat(idx_float));
+load('/home/sockeye/sharp/GOBAI/O2/Data/float_corr_Jul-2025_D');
+all_data.Oxygen(idx_float) = double(((all_data.Oxygen_sat_per(idx_float) - ...
+    (slp .* all_data.Oxygen_sat(idx_float) + int))./100) .* ...
+    all_data.Oxygen_sat(idx_float));
 
 % remove float data for test with ship data only
 % vars = fieldnames(all_data);

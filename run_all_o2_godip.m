@@ -5,11 +5,11 @@ t_whole_script=tic; % time entire script
 start_year = 1965;
 end_year = 2025;
 % system-specific worker configuration
-numWorkers_train = 20;
-numWorkers_predict = 20;
+numWorkers_train = 24;
+numWorkers_predict = 24;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202511;
+snap_date = 202601;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
@@ -82,11 +82,11 @@ grid_types = {'regridded' 'native_grid' 'native_grid' 'native_grid' 'native_grid
 %     'num_folds',num_folds);
 
 %% train models to create GOBAI product
-% % feed-forward neural networks
-% train_gobai('FFNN',param_props,file_date,float_file_ext,...
-%     num_clusters,variables,thresh,numWorkers_train,snap_date,...
-%     start_year,end_year,'reduce_data',data_per,'train_ratio',...
-%     train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
+% feed-forward neural networks
+train_gobai('FFNN',param_props,file_date,float_file_ext,...
+    num_clusters,variables,thresh,numWorkers_train,snap_date,...
+    start_year,end_year,'reduce_data',data_per,'train_ratio',...
+    train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
 
 %% estimate parameter on grid to create GOBAI product
 % % feed-forward neural networks

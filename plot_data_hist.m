@@ -32,7 +32,7 @@ set(gca,'FontSize',20);
 ylabel({'Number of Profiles';'(in thousands)'});
 
 % add legend
-legend({'OSD' 'CTD' 'FLT'},'Location','northwest','FontSize',20,'NumColumns',3);
+legend({'OSD' 'CTD' 'PFL'},'Location','northwest','FontSize',20,'NumColumns',3);
 
 % save figure
 export_fig(['O2/Figures/dataset_histogram_' num2str(y1) '_' ...
