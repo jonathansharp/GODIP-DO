@@ -2,7 +2,7 @@ function all_data = process_WOD_profile_data(y1,y2)
 
 % load WOD profile data
 folder = 'WOD25_Profiles_Data';
-types = {'PFL'};
+types = {'CTD' 'OSD' 'PFL'};
 
 % for oxygen
 vars_o2 = {'cruise' 'profile' 'time' 'year' 'month' 'day' 'lat' 'lon' 'depth' 'Oxygen'};
@@ -12,7 +12,7 @@ vars_both = [vars_o2 vars_other];
 for v = 1:length(vars_both); all_data.(vars_both{v}) = []; end
 all_data.type = [];
 % load oxygen variables
-for y = y2%y1:y2
+for y = y1:y2
     for x = 1:length(types)
         file = [folder '/Oxygen_' types{x} '_WOD25/Oxygen_' types{x} '_' num2str(y) '.nc'];
         if exist(file,'file')
@@ -37,9 +37,14 @@ for y = y2%y1:y2
             all_data_temp.Salinity = ncread(file,'Salinity');
             all_data_temp.sal_profile = ncread(file,'profile');
             % indices
+            if strcmp(types{x},'PFL')
             idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
                 ismember(all_data_temp.profile,all_data_temp.sal_profile) & ...
                 (all_data_temp.mode == 2 | all_data_temp.mode == 3);
+            else
+                idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
+                ismember(all_data_temp.profile,all_data_temp.sal_profile);
+            end
             idx_temp = ismember(all_data_temp.temp_profile,all_data_temp.profile) & ...
                 ismember(all_data_temp.temp_profile,all_data_temp.sal_profile);
             idx_sal = ismember(all_data_temp.sal_profile,all_data_temp.profile) & ...
