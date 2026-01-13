@@ -2,7 +2,7 @@ function all_data = process_WOD_profile_data(y1,y2)
 
 % load WOD profile data
 folder = 'WOD25_Profiles_Data';
-types = {'CTD' 'OSD' 'PFL'};
+types = {'PFL'};
 
 % for oxygen
 vars_o2 = {'cruise' 'profile' 'time' 'year' 'month' 'day' 'lat' 'lon' 'depth' 'Oxygen'};
@@ -12,7 +12,7 @@ vars_both = [vars_o2 vars_other];
 for v = 1:length(vars_both); all_data.(vars_both{v}) = []; end
 all_data.type = [];
 % load oxygen variables
-for y = y1:y2
+for y = y2%y1:y2
     for x = 1:length(types)
         file = [folder '/Oxygen_' types{x} '_WOD25/Oxygen_' types{x} '_' num2str(y) '.nc'];
         if exist(file,'file')
@@ -23,6 +23,11 @@ for y = y1:y2
             for v = 1:length(vars_o2)
                 all_data_temp.(vars_o2{v}) = ncread(file,vars_o2{v});
             end
+            if strcmp(types{x},'PFL')
+                all_data_temp.mode = ncread(file,'mode');
+            else
+                all_data_temp.mode = repmat(2,length(all_data_temp.(vars_o2{v})),1);
+            end
             % temp
             file = [folder '/Temperature_' types{x} '_WOD25/Temperature_' types{x} '_' num2str(y) '.nc'];
             all_data_temp.Temperature = ncread(file,'Temperature');
@@ -32,10 +37,15 @@ for y = y1:y2
             all_data_temp.Salinity = ncread(file,'Salinity');
             all_data_temp.sal_profile = ncread(file,'profile');
             % indices
-            idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ismember(all_data_temp.profile,all_data_temp.sal_profile);
-            idx_temp = ismember(all_data_temp.temp_profile,all_data_temp.profile) & ismember(all_data_temp.temp_profile,all_data_temp.sal_profile);
-            idx_sal = ismember(all_data_temp.sal_profile,all_data_temp.profile) & ismember(all_data_temp.sal_profile,all_data_temp.temp_profile);
-            % filter to only profiles with oxygen, temperature, and salinity
+            idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
+                ismember(all_data_temp.profile,all_data_temp.sal_profile) & ...
+                (all_data_temp.mode == 2 | all_data_temp.mode == 3);
+            idx_temp = ismember(all_data_temp.temp_profile,all_data_temp.profile) & ...
+                ismember(all_data_temp.temp_profile,all_data_temp.sal_profile);
+            idx_sal = ismember(all_data_temp.sal_profile,all_data_temp.profile) & ...
+                ismember(all_data_temp.sal_profile,all_data_temp.temp_profile);
+            idx_mode = all_data_temp.mode == 2 | all_data_temp.mode == 3;
+            % filter to only profiles with A or D oxygen, temperature, and salinity
             for v = 1:length(vars_o2)
                 if strcmp(vars_o2{v},'depth')
                     all_data_temp.(vars_o2{v}) = repmat(all_data_temp.(vars_o2{v}),1,sum(idx_o2));
