@@ -1,8 +1,8 @@
 % plot data histogram
-function plot_data_hist(y1,y2)
+function plot_data_hist(y1,y2,vrs)
 
 % load data
-load(['O2/Data/wod_data_' num2str(y1) '_' num2str(y2)],'all_data');
+load(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data');
 
 % establish figure
 figure('visible','off');
@@ -35,5 +35,5 @@ ylabel({'Number of Profiles';'(in thousands)'});
 legend({'OSD' 'CTD' 'PFL'},'Location','northwest','FontSize',20,'NumColumns',3);
 
 % save figure
-export_fig(['O2/Figures/dataset_histogram_' num2str(y1) '_' ...
+export_fig(['O2/Figures/' vrs '_dataset_histogram_' num2str(y1) '_' ...
     num2str(y2) '.png'],'-transparent','-silent');

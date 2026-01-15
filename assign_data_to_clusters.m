@@ -9,14 +9,14 @@
 % DATE: 10/05/2023
 
 function assign_data_to_clusters(param_props,base_grid,snap_date,float_file_ext,...
-    clust_vars,num_clusters,start_year,end_year)
+    clust_vars,num_clusters,start_year,end_year,vrs)
 
 %% process date
 date_str = num2str(snap_date);
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 
 %% load combined data
-load(['wod_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
 
 %% assign data points and probabilities to clusters
 % load GMM model

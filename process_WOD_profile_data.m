@@ -1,8 +1,14 @@
-function all_data = process_WOD_profile_data(y1,y2)
+function all_data = process_WOD_profile_data(y1,y2,vrs)
 
 % load WOD profile data
-folder = 'WOD25_Profiles_Data';
-types = {'CTD' 'OSD' 'PFL'};
+if strcmp(vrs,'WOD23')
+    nc_label = 'NCEI';
+    folder = 'WOD_Profiles_Data';
+elseif strcmp(vrs,'WOD25')
+    nc_label = 'WOD25';
+    folder = 'WOD25_Profiles_Data';
+end
+types = {'OSD' 'CTD' 'PFL'};
 
 % for oxygen
 vars_o2 = {'cruise' 'profile' 'time' 'year' 'month' 'day' 'lat' 'lon' 'depth' 'Oxygen'};
@@ -10,11 +16,11 @@ vars_other = {'Temperature' 'Salinity'};
 vars_both = [vars_o2 vars_other];
 % pre-allocate
 for v = 1:length(vars_both); all_data.(vars_both{v}) = []; end
-all_data.type = [];
+all_data.type = []; idx_mode = [];
 % load oxygen variables
 for y = y1:y2
     for x = 1:length(types)
-        file = [folder '/Oxygen_' types{x} '_WOD25/Oxygen_' types{x} '_' num2str(y) '.nc'];
+        file = [folder '/Oxygen_' types{x} '_' nc_label '/Oxygen_' types{x} '_' num2str(y) '.nc'];
         if exist(file,'file')
             schema = ncinfo(file);
             pdim = schema.Dimensions(1).Length;
@@ -23,54 +29,70 @@ for y = y1:y2
             for v = 1:length(vars_o2)
                 all_data_temp.(vars_o2{v}) = ncread(file,vars_o2{v});
             end
-            if strcmp(types{x},'PFL')
+            if strcmp(types{x},'PFL') & strcmp(vrs,'WOD25')
                 all_data_temp.mode = ncread(file,'mode');
-            else
-                all_data_temp.mode = repmat(2,length(all_data_temp.(vars_o2{v})),1);
             end
             % temp
-            file = [folder '/Temperature_' types{x} '_WOD25/Temperature_' types{x} '_' num2str(y) '.nc'];
+            file = [folder '/Temperature_' types{x} '_' nc_label '/Temperature_' types{x} '_' num2str(y) '.nc'];
             all_data_temp.Temperature = ncread(file,'Temperature');
             all_data_temp.temp_profile = ncread(file,'profile');
             % sal
-            file = [folder '/Salinity_' types{x} '_WOD25/Salinity_' types{x} '_' num2str(y) '.nc'];
+            file = [folder '/Salinity_' types{x} '_' nc_label '/Salinity_' types{x} '_' num2str(y) '.nc'];
             all_data_temp.Salinity = ncread(file,'Salinity');
             all_data_temp.sal_profile = ncread(file,'profile');
-            % indices
-            if strcmp(types{x},'PFL')
-            idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
-                ismember(all_data_temp.profile,all_data_temp.sal_profile) & ...
-                (all_data_temp.mode == 2 | all_data_temp.mode == 3);
+            % index for data mode
+            if strcmp(types{x},'PFL') & strcmp(vrs,'WOD25')
+                all_data_temp.idx_mode = (all_data_temp.mode == 2 | all_data_temp.mode == 3);
             else
-                idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
-                ismember(all_data_temp.profile,all_data_temp.sal_profile);
+                all_data_temp.idx_mode = true(size(all_data_temp.profile));
             end
+            % indices to ensure all profiles have O2, temp, and sal
+            idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
+                ismember(all_data_temp.profile,all_data_temp.sal_profile);
             idx_temp = ismember(all_data_temp.temp_profile,all_data_temp.profile) & ...
                 ismember(all_data_temp.temp_profile,all_data_temp.sal_profile);
             idx_sal = ismember(all_data_temp.sal_profile,all_data_temp.profile) & ...
                 ismember(all_data_temp.sal_profile,all_data_temp.temp_profile);
-            idx_mode = all_data_temp.mode == 2 | all_data_temp.mode == 3;
-            % filter to only profiles with A or D oxygen, temperature, and salinity
+            % filter to only profiles with A or D oxygen, temperature,
+            % and salinity, and above 2250m
+            idx_depth = find(all_data_temp.depth <= 2250);
             for v = 1:length(vars_o2)
                 if strcmp(vars_o2{v},'depth')
-                    all_data_temp.(vars_o2{v}) = repmat(all_data_temp.(vars_o2{v}),1,sum(idx_o2));
+                    all_data_temp.(vars_o2{v}) = repmat(all_data_temp.(vars_o2{v})(idx_depth),1,sum(idx_o2));
                 elseif strcmp(vars_o2{v},'Oxygen')
-                    all_data_temp.(vars_o2{v}) = all_data_temp.(vars_o2{v})(1:zdim,idx_o2);
+                    all_data_temp.(vars_o2{v}) = all_data_temp.(vars_o2{v})(idx_depth,idx_o2);
                 else
-                    all_data_temp.(vars_o2{v}) = repmat(all_data_temp.(vars_o2{v})(idx_o2)',zdim,1);
+                    all_data_temp.(vars_o2{v}) = repmat(all_data_temp.(vars_o2{v})(idx_o2)',length(idx_depth),1);
                 end
             end
-            all_data_temp.Temperature = all_data_temp.Temperature(1:zdim,idx_temp);
-            all_data_temp.Salinity = all_data_temp.Salinity(1:zdim,idx_sal);
+            all_data_temp.idx_mode = repmat(all_data_temp.idx_mode(idx_o2)',length(idx_depth),1);
+            all_data_temp.Temperature = all_data_temp.Temperature(idx_depth,idx_temp);
+            all_data_temp.Salinity = all_data_temp.Salinity(idx_depth,idx_sal);
             % add values to vector
             idx = ~isnan(all_data_temp.Oxygen);
             for v = 1:length(vars_both)
                 all_data.(vars_both{v}) = [all_data.(vars_both{v});all_data_temp.(vars_both{v})(idx)];
             end
+            idx_mode = [idx_mode;all_data_temp.idx_mode(idx)];
             % type: CTD=1 OSD=2 PFL=3
             all_data.type = [all_data.type;repmat(x,sum(idx(:)),1)];
         end
     end
+end
+
+% % test plot
+% depths = unique(all_data.depth);
+% for d = 1:length(depths)
+%     idx = all_data.depth == depths(d);
+%     o2(d) = mean(all_data.Oxygen(idx));
+% end
+% figure; plot(depths,o2);
+
+% remove real-time data
+idx_mode = logical(idx_mode);
+vars = fieldnames(all_data);
+for v = 1:length(vars)
+    all_data.(vars{v}) = all_data.(vars{v})(idx_mode);
 end
 
 % calculate ancillary parameters
@@ -117,5 +139,5 @@ all_data.Oxygen(idx_float) = double(((all_data.Oxygen_sat_per(idx_float) - ...
 % end
 
 % save data
-save(['O2/Data/wod_data_' num2str(y1) '_' num2str(y2)],'all_data','-v7.3');
+save(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data','-v7.3');
 

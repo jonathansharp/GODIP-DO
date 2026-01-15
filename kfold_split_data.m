@@ -8,10 +8,10 @@
 % DATE: 2/7/2025
 
 function kfold_split_data(param_props,file_date,float_file_ext,...
-    start_year,end_year,glodap_only,num_clusters,num_folds,thresh)
+    start_year,end_year,glodap_only,num_clusters,num_folds,thresh,vrs)
 
 %% load combined data
-load(['wod_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
 
 %% load data clusters
 load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...

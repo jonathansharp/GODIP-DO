@@ -9,7 +9,7 @@
 
 function train_gobai(alg_type,param_props,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_train,...
-    snap_date,start_year,end_year,varargin)
+    snap_date,start_year,end_year,vrs,varargin)
 
 %% set defaults and process optional input arguments
 num_folds = 1;
@@ -81,7 +81,7 @@ elseif strcmp(alg_type,'GBM')
 end
 
 %% load combined data
-load(['O2/Data/wod_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
 
 %% load data clusters
 load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...

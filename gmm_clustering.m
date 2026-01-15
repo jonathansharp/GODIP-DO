@@ -1,5 +1,5 @@
 function gmm_clustering(param_props,fpaths,base_grid,start_year,end_year,snap_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_predict,varargin)
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict,vrs,varargin)
 
 %% process optional input arguments
 % pre-allocate
@@ -19,7 +19,7 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 
 
 %% load data
-load(['O2/Data/wod_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
 
 %% fit GMM from data points themselves
 tic
