@@ -41,7 +41,7 @@ data_per_osse = 0.01; % set data reduction for osse
 param = 'o2';
 param_props = param_config(param);
 % base grid
-base_grid = 'EN4';
+base_grid = 'IAP';
 fpaths = path_config(base_grid,param);
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -53,27 +53,27 @@ grid_types = {'regridded' 'native_grid' 'native_grid' 'native_grid' 'native_grid
 wod_vrs = 'WOD25';
 
 %% Import data
-process_WOD_profile_data(start_year,end_year,wod_vrs);
-% plot data histogram by year
-plot_data_hist(start_year,end_year,wod_vrs);
+% process_WOD_profile_data(start_year,end_year,wod_vrs);
+% % plot data histogram by year
+% plot_data_hist(start_year,end_year,wod_vrs);
 
 %% create time-varying clusters and assign data points to them
-% form clusters
-gmm_clustering(param_props,fpaths,base_grid,start_year,...
-    end_year,snap_date,float_file_ext,clust_vars,num_clusters,...
-    numWorkers_predict,wod_vrs);
-% plot cluster animations
-% plot_cluster_animation(param_props,fpaths,base_grid,num_clusters,...
-%     start_year,snap_date,numWorkers_train);
-% cluster data
-assign_data_to_clusters(param_props,base_grid,snap_date,...
-    float_file_ext,clust_vars,num_clusters,start_year,end_year,wod_vrs);
-% plot clustered data points
-plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,...
-    num_clusters,numWorkers_predict,start_year,end_year,wod_vrs);
-% develop k-fold evaluation indices
-kfold_split_data(param_props,file_date,float_file_ext,...
-    start_year,end_year,glodap_only,num_clusters,num_folds,thresh,wod_vrs);
+% % form clusters
+% gmm_clustering(param_props,fpaths,base_grid,start_year,...
+%     end_year,snap_date,float_file_ext,clust_vars,num_clusters,...
+%     numWorkers_predict,wod_vrs);
+% % plot cluster animations
+% % plot_cluster_animation(param_props,fpaths,base_grid,num_clusters,...
+% %     start_year,snap_date,numWorkers_train);
+% % cluster data
+% assign_data_to_clusters(param_props,base_grid,snap_date,...
+%     float_file_ext,clust_vars,num_clusters,start_year,end_year,wod_vrs);
+% % plot clustered data points
+% plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,...
+%     num_clusters,numWorkers_predict,start_year,end_year,wod_vrs);
+% % develop k-fold evaluation indices
+% kfold_split_data(param_props,file_date,float_file_ext,...
+%     start_year,end_year,glodap_only,num_clusters,num_folds,thresh,wod_vrs);
 
 %% k-fold train models for evaluation stats
 % % feed-forward neural networks
@@ -91,11 +91,11 @@ train_gobai('FFNN',param_props,file_date,float_file_ext,...
     train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
 
 %% estimate parameter on grid to create GOBAI product
-% % feed-forward neural networks
-% predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
-%     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
-%     end_year,snap_date,'train_ratio',train_ratio,'val_ratio',val_ratio,...
-%     'test_ratio',test_ratio);
+% feed-forward neural networks
+predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
+    num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
+    end_year,snap_date,wod_vrs,'train_ratio',train_ratio,'val_ratio',val_ratio,...
+    'test_ratio',test_ratio);
 % plot_gobai_animation(param_props,fpaths.param_path,base_grid,num_clusters,'FFNN',...
 %     file_date,float_file_ext,numWorkers_predict,'train_ratio',train_ratio,...
 %     'val_ratio',val_ratio,'test_ratio',test_ratio);

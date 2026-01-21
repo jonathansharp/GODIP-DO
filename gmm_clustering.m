@@ -43,10 +43,10 @@ gmm = fitgmdist(X_norm,num_clusters,...
     'CovarianceType','diagonal',...
     'SharedCovariance',true,'Replicates',10);
 % save GMM model
-if ~isfolder([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)])
-    mkdir([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
+if ~isfolder([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters)])
+    mkdir([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters)]);
 end
-save([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+save([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' date_str],...
     'gmm','num_clusters','C','S','-v7.3');
 clear gmm C S
 toc
@@ -82,7 +82,7 @@ TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
 create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
 
 % load GMM model
-load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
+load([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' ...
     date_str],'gmm','C','S');
 
 % set up parallel pool

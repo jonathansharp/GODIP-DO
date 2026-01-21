@@ -10,7 +10,7 @@
 
 function predict_gobai(alg_type,param_props,fpaths,...
     base_grid,file_date,float_file_ext,num_clusters,variables,thresh,...
-    numWorkers_predict,clust_vars,start_year,end_year,snap_date,varargin)
+    numWorkers_predict,clust_vars,start_year,end_year,snap_date,vrs,varargin)
 
 %% process optional input arguments
 % pre-allocate
@@ -108,7 +108,11 @@ for v = 1:length(variables)
 end
 
 %% create netCDF file that will be end result
-TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
+if strcmp(base_grid,'EN4')
+    TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
+elseif strcmp(base_grid,'IAP')
+    TS = load_IAP_dim(fpaths.temp_path,start_year,end_year);
+end
 % create file
 create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
 
@@ -121,28 +125,46 @@ tStart = tic;
 %% compute and save estimates for each month
 parfor m = 1:length(TS.months)
     % load dimensions
-    TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
+    if strcmp(base_grid,'EN4')
+        TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
+    elseif strcmp(base_grid,'IAP')
+        TS = load_IAP_dim(fpaths.temp_path,start_year,end_year);
+    end
     % index to above 2000m
     idx_depth = find(TS.Depth < 2000);
     TS.Depth = TS.Depth(idx_depth);
     TS.zdim = length(idx_depth);
     TS = replicate_dims(base_grid,TS,1);
     % get monthly T and S
-    try
-        TS.Temperature = ncread([fpaths.temp_path 'EN.4.2.2.f.analysis.c14.' ...
-            num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
-            'temperature',[1 1 1 1],[Inf Inf idx_depth(end) 1])-273.15;
-        TS.Salinity = ncread([fpaths.sal_path 'EN.4.2.2.f.analysis.c14.' ...
-            num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
-            'salinity',[1 1 1 1],[Inf Inf idx_depth(end) 1]);
-    catch
-        TS.Temperature = ncread([fpaths.temp_path 'EN.4.2.2.p.analysis.c14.' ...
-            num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
-            'temperature',[1 1 1 1],[Inf Inf idx_depth(end) 1])-273.15;
-        TS.Salinity = ncread([fpaths.sal_path 'EN.4.2.2.p.analysis.c14.' ...
-            num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
-            'salinity',[1 1 1 1],[Inf Inf idx_depth(end) 1]);
+    if strcmp(base_grid,'EN4')
+        try
+            TS.Temperature = ncread([fpaths.temp_path 'EN.4.2.2.f.analysis.c14.' ...
+                num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
+                'temperature',[1 1 1 1],[Inf Inf idx_depth(end) 1])-273.15;
+            TS.Salinity = ncread([fpaths.sal_path 'EN.4.2.2.f.analysis.c14.' ...
+                num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
+                'salinity',[1 1 1 1],[Inf Inf idx_depth(end) 1]);
+        catch
+            TS.Temperature = ncread([fpaths.temp_path 'EN.4.2.2.p.analysis.c14.' ...
+                num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
+                'temperature',[1 1 1 1],[Inf Inf idx_depth(end) 1])-273.15;
+            TS.Salinity = ncread([fpaths.sal_path 'EN.4.2.2.p.analysis.c14.' ...
+                num2str(TS.years(m)) sprintf('%02d',TS.months(m)) '.nc'],...
+                'salinity',[1 1 1 1],[Inf Inf idx_depth(end) 1]);
+        end
+    elseif strcmp(base_grid,'IAP')
+        TS.Temperature = ncread([fpaths.temp_path ...
+            'IAPv4_Temp_monthly_1_6000m_year_' num2str(TS.years(m)) ...
+            '_month_' sprintf('%02d',TS.months(m)) '.nc'],...
+            'temp',[1 1 1],[Inf Inf idx_depth(end)]);
+        TS.Temperature(TS.Temperature==999) = NaN;
+        TS.Salinity_abs = ncread([fpaths.sal_path ...
+            'IAPv2_Salinity_monthly_1_6000m_year_' num2str(TS.years(m)) ...
+            '_month_' sprintf('%02d',TS.months(m)) '.nc'],...
+            'salinity',[1 1 1],[Inf Inf idx_depth(end)]);
+        TS.Salinity_abs(TS.Salinity_abs==999) = NaN;
     end
+
     % covert RG T and S to conservative Temperature and absolute Salinity
     % lon_3d = repmat(TS.Longitude,1,TS.ydim,TS.zdim);
     % lat_3d = repmat(TS.Latitude',TS.xdim,1,TS.zdim);
@@ -160,7 +182,8 @@ parfor m = 1:length(TS.months)
     % apply model
     apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         base_grid,m,1,m,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-        thresh,gobai_alg_dir,param_props,fpaths.param_path,date_str,clust_vars);
+        thresh,gobai_alg_dir,param_props,fpaths.param_path,date_str,...
+        clust_vars,vrs);
 end
 
 % end parallel session
@@ -204,7 +227,7 @@ end
 %% for processing 3D grids and applying trained models to them
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir,...
-    param_props,param_path,date_str,clust_vars)
+    param_props,param_path,date_str,clust_vars,vrs)
     
     % define folder name
     folder_name = [param_path 'GMM_' base_grid '_' num2str(num_clusters)];
@@ -229,9 +252,15 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     end
 
     % calculate absolute Salinity, conservative Temperature, potential density
-    TS.Salinity_abs_array = gsw_SA_from_SP(TS.Salinity_array,TS.pressure_array,TS.lon_array,TS.lat_array);
-    TS.Temperature_cns_array = gsw_CT_from_pt(TS.Salinity_abs_array,TS.Temperature_array);
-    TS.sigma_array = gsw_sigma0(TS.Salinity_abs_array,TS.Temperature_cns_array);
+    if strcmp(base_grid,'EN4')
+        TS.Salinity_abs_array = gsw_SA_from_SP(TS.Salinity_array,TS.pressure_array,TS.lon_array,TS.lat_array);
+        TS.Temperature_cns_array = gsw_CT_from_pt(TS.Salinity_abs_array,TS.Temperature_array);
+        TS.sigma_array = gsw_sigma0(TS.Salinity_abs_array,TS.Temperature_cns_array);
+    elseif strcmp(base_grid,'IAP')
+        TS.Salinity_array = TS.Salinity_abs_array; %% just replace salinity with absolute salinity because there was some error I couldn;t figure out in gsw_SP_from_SA
+        TS.Temperature_cns_array = gsw_CT_from_pt(TS.Salinity_abs_array,TS.Temperature_array);
+        TS.sigma_array = gsw_sigma0(TS.Salinity_abs_array,TS.Temperature_cns_array);
+    end
 
     % pre-allocate
     gobai_matrix = single(nan(length(TS.Temperature_array),num_clusters));
@@ -240,7 +269,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     % apply GMM model for RFROM basegrid
     if strcmp(base_grid,'RFROM')
         % load GMM model
-        load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
+        load([param_props.dir_name '/Data/GMM_' vrs '_' ...
             num2str(num_clusters) '/model_' date_str],'gmm','C','S');
         % transform to normalized arrays
         predictor_matrix = [];
@@ -261,7 +290,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
 
         % load GMM cluster probabilities for this cluster and month, and convert to array
         % load GMM model
-        load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
+        load([param_props.dir_name '/Data/GMM_' vrs '_' ...
             num2str(num_clusters) '/model_' date_str],'gmm','C','S');
         % transform predictors to normalized arrays
         predictor_matrix = [];

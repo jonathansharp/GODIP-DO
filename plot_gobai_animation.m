@@ -118,11 +118,7 @@ parfor d = 1:length(depths)
         m_proj('robinson','lon',[20 380]);
         z = [gobai(~idx_20,:);gobai(idx_20,:)];
         m_pcolor(double(Longitude),double(Latitude),double(z)');
-        if strcmp(base_grid,'RFROM')
             title(gca,datestr(time,'mmm-YYYY'),'FontSize',20);
-        else
-            title(gca,extractAfter(datestr(datenum(2004,t,1)),'-'),'FontSize',20);
-        end
         colormap(param_props.cmap);
         m_coast('patch',rgb('grey'));
         m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);

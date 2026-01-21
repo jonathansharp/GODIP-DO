@@ -2,7 +2,7 @@
 
 %% file properties
 file_date = 'Jan2026';
-fpath = '/raid/sharp/matlab/GODIP-DO/O2_Maps/';
+fpath = '/fast4/o2/GODIP-DO/O2_Maps/';
 fname = ['GODIP-DO_NCEI_JDS_' file_date '.nc'];
 fname_seas = ['GODIP-DO_NCEI_SEASONAL_JDS_' file_date '.nc'];
 products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gt_ml' 'jingwei' 'han_zhou'};
@@ -74,7 +74,7 @@ datasets.gt_ml.date = datevec(datenum(1965,0,15)+datasets.gt_ml.time);
 datasets.gt_ml.param_name = 'o2';
 
 %% import jingwei dimensions
-datasets.jingwei.name = 'o2map_v1.1_5500m_sjtu_jingwei.nc';
+datasets.jingwei.name = 'o2map_v1.2_5500m_sjtu_jingwei.nc';
 datasets.jingwei.lat = ncread([fpath datasets.jingwei.name],'lat');
 datasets.jingwei.lon = ncread([fpath datasets.jingwei.name],'lon');
 datasets.jingwei.time = double(ncread([fpath datasets.jingwei.name],'time'));

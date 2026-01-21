@@ -3,7 +3,8 @@ close all;
 
 %% file and plot properties
 file_date = 'Jan2026';
-fpath = '/raid/sharp/matlab/GODIP-DO/';
+fpath = '/fast4/o2/GODIP-DO/';
+fpath_EN4 = '/fast7/';
 compilation.name = ['GODIP-DO_NCEI_JDS_' file_date '.nc'];
 % products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gt_ml' 'jingwei' 'han_zhou'};
 products = ncread([fpath 'O2_Maps/' compilation.name],'products');
@@ -13,6 +14,7 @@ o2_lims = [0 400]; o2_levels = o2_lims(1):12.5:o2_lims(end);
 anom_lims = [-40 40]; anom_levels = anom_lims(1):2.5:anom_lims(end);
 trend_lims = [-6 6]; trend_levels = trend_lims(1):0.5:trend_lims(end);
 temp_anom_lims = [-3.5 3.5]; temp_anom_levels = temp_anom_lims(1):0.25:temp_anom_lims(end);
+o2_inv_lims = [0 15000];
 
 %% import compilation dimensions
 lat = ncread([fpath 'O2_Maps/' compilation.name],'lat');
@@ -20,7 +22,6 @@ lon = ncread([fpath 'O2_Maps/' compilation.name],'lon');
 time = ncread([fpath 'O2_Maps/' compilation.name],'time');
 depth = ncread([fpath 'O2_Maps/' compilation.name],'depth');
 mask = logical(ncread([fpath 'O2_Maps/' compilation.name],'mask'));
-
 
 %% depth limits for inventory calculations
 d1 = 10; d2 = 1000;
@@ -53,26 +54,35 @@ mask = all(mask,4); % set constant mask over time
 if ~exist([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_STATS_' file_date '.mat'],'file')
 
 % calculate statistics
+layers = {'10-1000' '10-100' '100-1000'}; lyr_top = [10 10 100]; lyr_bot = [1000 100 1000];
 o2_mean = nan(length(lon),length(lat),d2_idx-d1_idx+1,length(products));
 o2_trend = nan(length(lon),length(lat),d2_idx-d1_idx+1,length(products));
-o2_inv_mean_10_1000 = nan(length(lon),length(lat),length(products));
-o2_inv_mean_10_100 = nan(length(lon),length(lat),length(products));
-o2_inv_mean_100_1000 = nan(length(lon),length(lat),length(products));
-o2_inv_ts_10_1000 = nan(length(time),length(products));
+o2_inv_mean = nan(length(lon),length(lat),length(products),length(layers));
+o2_inv_trend = nan(length(lon),length(lat),length(products),length(layers));
+o2_inv_ts = nan(length(time),length(products),length(layers));
 for p = 1:length(products)
     % o2 maps over time in umol/kg
     o2 = squeeze(ncread([fpath 'O2_Maps/' compilation.name],products{p},...
         [1 1 d1_idx 1],[Inf Inf d2_idx-d1_idx+1 Inf]));
     if p <= 5 % add woa mean to o2 anomalies
-        o2 = o2+ncei_mean.o2;
+        o2 = o2 + ncei_mean.o2;
     end
-    o2_mean(:,:,:,p) = mean(o2,4,'omitnan');
+    o2_mean(:,:,:,p) = mean(o2,4,'omitnan'); % mean for each grid cell
     o2_m3 = o2.*1027.*(1e-6); % umol/kg * kg/m3 * mol/umol = mol/m3
-    o2_m3(~mask) = NaN; dv(~mask) = NaN; % remove values outside common mask
+    o2_m3(~mask) = NaN; dv(~mask) = NaN; dh(~mask) = NaN; % remove values outside common mask
     % calculate long-term mean inventory
-    o2_inv_temp_10_1000 = squeeze((sum(o2_m3,3,'omitnan').*sum(dh,3,'omitnan'))); % mol/m2
-    o2_inv_mean_10_1000(:,:,p) = mean(o2_inv_temp_10_1000,3); % mol/m2
-    % calculate trends
+    idx_full_mask = sum(mask,3) == 45;
+    for l = 1:length(layers)
+        idx_top = find(depth==lyr_top(l));
+        idx_bot = find(depth==lyr_bot(l));
+        o2_inv_temp = ...
+            squeeze((sum(o2_m3(:,:,idx_top:idx_bot,:),3,'omitnan').*...
+            sum(dh(:,:,idx_top:idx_bot),3,'omitnan'))); % mol/m2
+        o2_inv_temp = mean(o2_inv_temp,3);
+        o2_inv_temp(~idx_full_mask) = NaN;
+        o2_inv_mean(:,:,p,l) = o2_inv_temp; % mol/m2
+    end
+    % calculate trends in umol/kg
     for x = 1:length(lon)
         for y =1:length(lat)
             for z = 1:length(depth)
@@ -84,28 +94,49 @@ for p = 1:length(products)
             end
         end
     end
-    % plot trends
-    figure('Position',[100 100 1200 600]);
-    worldmap(lat_lims,lon_lims);
-    pcolorm(lat,lon,o2_trend(:,:,1,p)');
-    c = colorbar;
-    mlabel off; plabel off; gridm off;
-    drawnow;
-    close;
+    % calculate inventory trends
+    for l = 1:length(layers)
+        idx_top = find(depth==lyr_top(l));
+        idx_bot = find(depth==lyr_bot(l));
+        o2_inv_temp = ...
+            squeeze((sum(o2_m3(:,:,idx_top:idx_bot,:),3).*...
+            sum(dh(:,:,idx_top:idx_bot),3))); % mol/m2
+        for x = 1:length(lon)
+            for y =1:length(lat)
+                if sum(~isnan(o2_inv_temp(x,y,:))) > length(time)/2 % if more than half the grid cells are filled
+                    idx = ~isnan(o2_inv_temp(x,y,:));
+                    fit_params = polyfit(time(idx),squeeze(o2_inv_temp(x,y,idx)),1); % mol/m2/day
+                    o2_inv_trend(x,y,p,l) = 10.*365.25.*fit_params(1); % conver to umol/kg per decade
+                end
+            end
+        end
+    end
+    % % plot trends
+    % figure('Position',[100 100 1200 600]);
+    % worldmap(lat_lims,lon_lims);
+    % pcolorm(lat,lon,o2_inv_trend(:,:,p)');
+    % c = colorbar;
+    % mlabel off; plabel off; gridm off;
+    % drawnow;
+    % close;
     % inventory time series
-    for t = 1:length(time)
-        o2_temp = o2_m3(:,:,:,t); o2_temp = o2_temp(mask); % mol/m3
-        dv_temp = dv(:,:,:,t); dv_temp = dv_temp(mask); % m3
-        o2_inv_ts_10_1000(t,p) = sum(o2_temp.*dv_temp,'omitnan')./(10^15); % Pmol
+    for l = 1:length(layers)
+        idx_top = find(depth==lyr_top(l));
+        idx_bot = find(depth==lyr_bot(l));
+        for t = 1:length(time)
+            o2_temp = o2_m3(:,:,idx_top:idx_bot,t);
+            o2_temp = o2_temp(mask(:,:,idx_top:idx_bot)); % mol/m3
+            dv_temp = dv(:,:,idx_top:idx_bot,t);
+            dv_temp = dv_temp(mask(:,:,idx_top:idx_bot)); % m3
+            o2_inv_ts(t,p,l) = sum(o2_temp.*dv_temp,'omitnan')./(10^15); % Pmol
+        end
     end
     disp(['Inventories calculated for ' products{p}]);
 end
-o2_inv_mean_10_1000(o2_inv_mean_10_1000==0) = NaN; % replace zeros with NaN
-o2_inv_ts_10_1000(o2_inv_ts_10_1000==0) = NaN; % replace zeros with NaN
 
 % save stats for each product
-save([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_STATS_' file_date],'o2_inv_mean_10_1000',...
-    'o2_inv_ts_10_1000','o2_mean','o2_trend');
+save([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_STATS_' file_date],...
+    'o2_mean','o2_trend','o2_inv_mean','o2_inv_trend','o2_inv_ts');
 
 else
 
@@ -146,7 +177,7 @@ mean(iav(6:9))
 std(iav(6:9))
 
 %% calculate temp/sal anomalies
-if ~exist([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_TEMP_SAL_' file_date '.mat'],'file')
+if ~exist([fpath_EN4 'O2_Maps/' 'GODIP-DO_NCEI_JDS_TEMP_SAL_' file_date '.mat'],'file')
 
 % pre-allocate
 EN4.temp = nan(360,173,42,length(time));
@@ -154,23 +185,23 @@ EN4.sal = nan(360,173,42,length(time));
 EN4.temp_common = nan(length(lon),length(lat),length(depth),length(time));
 EN4.sal_common = nan(length(lon),length(lat),length(depth),length(time));
 % load dimensions
-EN4.lon = ncread([fpath 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.196501.nc'],'lon');
-EN4.lat = ncread([fpath 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.196501.nc'],'lat');
-EN4.depth = ncread([fpath 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.196501.nc'],'depth');
+EN4.lon = ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.196501.nc'],'lon');
+EN4.lat = ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.196501.nc'],'lat');
+EN4.depth = ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.196501.nc'],'depth');
 % assemble annual means
 for t = 1:length(time)
     temp_temp = []; sal_temp = [];
     for m = 1:12
         try
-            temp_temp = cat(4,temp_temp,ncread([fpath 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.' ...
+            temp_temp = cat(4,temp_temp,ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.' ...
                 num2str(year(t)) sprintf('%02d',m) '.nc'],'temperature'));
-            sal_temp = cat(4,sal_temp,ncread([fpath 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.' ...
+            sal_temp = cat(4,sal_temp,ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.f.analysis.c14.' ...
                 num2str(year(t)) sprintf('%02d',m) '.nc'],'salinity'));
         catch
             try
-                temp_temp = cat(4,temp_temp,ncread([fpath 'EN4.2.2/' 'EN.4.2.2.p.analysis.c14.' ...
+                temp_temp = cat(4,temp_temp,ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.p.analysis.c14.' ...
                     num2str(year(t)) sprintf('%02d',m) '.nc'],'temperature'));
-                sal_temp = cat(4,sal_temp,ncread([fpath 'EN4.2.2/' 'EN.4.2.2.p.analysis.c14.' ...
+                sal_temp = cat(4,sal_temp,ncread([fpath_EN4 'EN4.2.2/' 'EN.4.2.2.p.analysis.c14.' ...
                     num2str(year(t)) sprintf('%02d',m) '.nc'],'salinity'));
             catch
                 % do not replace NaNs
@@ -263,10 +294,10 @@ for d = 1:length(depth_indices)
     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_ ' ...
+    figname = ['Figures/ensemble_mean_o2_' ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/vectors/ensemble_mean_o2_ ' ...
+    figname = ['Figures/vectors/ensemble_mean_o2_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
@@ -477,7 +508,7 @@ for d = 1:length(depth_indices)
         figname = ['Figures/o2_trend_ ' labels{p} '_' ...
             num2str(depth(depth_indices(d)))];
         export_fig([figname '.png'],'-transparent');
-        figname = ['Figures/vectors/o2_trend_ ' labels{p} '_' ...
+        figname = ['Figures/vectors/o2_trend_' labels{p} '_' ...
             num2str(depth(depth_indices(d)))];
         exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
         close;
@@ -943,7 +974,7 @@ mlabel off; plabel off; gridm off;
 mean_o2_seas_baseline_N = nan(length(products),length(depth_indices),12);
 mean_o2_seas_anom_N = nan(length(products),length(depth_indices),12);
 mean_o2_seas_baseline_var_N = nan(length(products),length(depth_indices),12);
-for p = 6:7
+for p = 1:length(products)
     % 10m
     o2_seas_baseline = squeeze(ncread([fpath 'O2_Maps/' compilation.name],...
         [products{p} '_baseline_seas'],[1 1 d1_idx 1],[Inf Inf 1 Inf]));
@@ -1024,5 +1055,108 @@ annotation('textbox',[0.51 .3 0 0],'string','(f)','FontSize',16);
 figname = 'Figures/SotC_Fig3';
 export_fig([figname '.png'],'-transparent');
 figname = 'Figures/vectors/SotC_Fig3';
+exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+close;
+
+%% plot SoTC Figure 2 (WITH INVENTORIES)
+figure('Position',[100 100 1200 1000]);
+SotC_fig = tiledlayout(3,2,'TileSpacing','tight','Padding','none');
+ax1 = nexttile; % distribution at 10
+worldmap(lat_lims,lon_lims);
+set(ax1,'FontSize',12,'LineWidth',2);
+setm(ax1,'MapProjection','miller'); tightmap;
+title(['O_{2} Inventory from ' num2str(lyr_top(2)) ...
+    ' to ' num2str(lyr_bot(2)) ' meters (mol m^{-2})']);
+pcolorm(lat,[lon;lon(end)+1],mean([o2_inv_mean(:,:,2);...
+    o2_inv_mean(end,:,2)],3,'omitnan')');
+c = colorbar; clim(o2_inv_lims); c.TickLength = 0;
+colormap(ax1,customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
+plot_land('map',[1 1 1]);
+mlabel off; plabel off; gridm off;
+ax2 = nexttile; % distribution at 250
+worldmap(lat_lims,lon_lims);
+set(ax2,'FontSize',12,'LineWidth',2);
+setm(ax2,'MapProjection','miller'); tightmap;
+title(['O_{2} Inventory from ' num2str(lyr_top(3)) ...
+    ' to ' num2str(lyr_bot(3)) ' meters (mol m^{-2})']);
+pcolorm(lat,[lon;lon(end)+1],mean([o2_inv_mean(:,:,3);...
+    o2_inv_mean(end,:,3)],3,'omitnan')');
+c = colorbar; clim(o2_inv_lims); c.TickLength = 0;
+colormap(ax2,customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
+plot_land('map',[1 1 1]);
+mlabel off; plabel off; gridm off;
+ax3 = nexttile; % trend at 10
+worldmap(lat_lims,lon_lims);
+set(ax3,'FontSize',12,'LineWidth',2);
+setm(ax3,'MapProjection','robinson'); tightmap;
+title(['[O_{2}] Trend at ' num2str(depth(depth_indices(1))) ...
+    ' meters (\mumol kg^{-1} dec.^{-1})']);
+ens_mean_trend = mean(o2_trend(:,:,depth_indices(1),:),4,'omitnan');
+ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(1),:),4,'omitnan');
+ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(1),:),4,'omitnan');
+sum_pos = sum(o2_trend(:,:,depth_indices(1),:) > 0,4);
+sum_neg = sum(o2_trend(:,:,depth_indices(1),:) < 0,4);
+idx = sum_pos >= 7 | sum_neg >= 7;
+ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]');
+%h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non;ens_mean_trend_non(end,:)]');
+%h2.FaceAlpha = 0.5;
+% contourm(lat,[lon;lon(end)+1],[ens_mean_trend;ens_mean_trend(end,:)]',...
+%     trend_levels,'k','LineWidth',1,'ShowText','off');
+stipplem(lat,lon,~idx' & ~isnan(ens_mean_trend)','density',300,'color',[.5 .5 .5]);
+c = colorbar; clim(trend_lims); c.TickLength = 0;
+colormap(ax3,flipud(cmocean('curl',length(trend_levels)-1,'pivot',0)));
+plot_land('map',[1 1 1]);
+mlabel off; plabel off; gridm off;
+ax4 = nexttile; % trend at 250
+worldmap(lat_lims,lon_lims);
+set(ax4,'FontSize',12,'LineWidth',2);
+setm(ax4,'MapProjection','robinson'); tightmap;
+title(['[O_{2}] Trend at ' num2str(depth(depth_indices(2))) ...
+    ' meters (\mumol kg^{-1} dec.^{-1})']);
+ens_mean_trend = mean(o2_trend(:,:,depth_indices(2),:),4,'omitnan');
+ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(2),:),4,'omitnan');
+ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(2),:),4,'omitnan');
+sum_pos = sum(o2_trend(:,:,depth_indices(2),:) > 0,4);
+sum_neg = sum(o2_trend(:,:,depth_indices(2),:) < 0,4);
+idx = sum_pos >=7 | sum_neg >= 7;
+ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]');
+%h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non;ens_mean_trend_non(end,:)]');
+%h2.FaceAlpha = 0.5;
+% contourm(lat,[lon;lon(end)+1],[ens_mean_trend;ens_mean_trend(end,:)]',...
+%     trend_levels,'k','LineWidth',1,'ShowText','off');
+stipplem(lat,lon,~idx' & ~isnan(ens_mean_trend)','density',300,'color',[.5 .5 .5]);
+c = colorbar; clim(trend_lims); c.TickLength = 0;
+colormap(ax4,flipud(cmocean('curl',length(trend_levels)-1,'pivot',0)));
+plot_land('map',[1 1 1]);
+mlabel off; plabel off; gridm off;
+ax5 = nexttile([1 2]); % timeseries
+hold on; box on;
+set(ax5,'FontSize',12,'LineWidth',2,'YAxisLocation','right');
+plot(time,repmat(0,length(time),1),'k--');
+for p = 1:length(products)
+    if p <= 5
+        plot(time,o2_inv_ts_10_1000(:,p)-mean(o2_inv_ts_10_1000(:,p),'omitnan'),...
+            'linewidth',2,'LineStyle','-');
+    else
+        plot(time,o2_inv_ts_10_1000(:,p)-mean(o2_inv_ts_10_1000(:,p),'omitnan'),...
+            'linewidth',2,'LineStyle','--');
+    end
+end
+ylabel('O_{2} Inventory Anomaly (Pmol)');
+xlim([min(time) max(time)]); datetick('x','keeplimits'); 
+legend([{''} labels],'NumColumns',3,'Location','southwest');
+hold off
+% add annotations
+annotation('textbox',[0.01 0.965 0 0],'string','(a)','FontSize',16);
+annotation('textbox',[0.51 0.965 0 0],'string','(b)','FontSize',16);
+annotation('textbox',[0.01 .645 0 0],'string','(c)','FontSize',16);
+annotation('textbox',[0.51 .645 0 0],'string','(d)','FontSize',16);
+annotation('textbox',[0.01 .36 0 0],'string','(e)','FontSize',16);
+% save figure
+figname = 'Figures/SotC_Fig2';
+export_fig([figname '.png'],'-transparent');
+figname = 'Figures/vectors/SotC_Fig2';
 exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 close;
