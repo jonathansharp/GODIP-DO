@@ -20,15 +20,20 @@ TS.xdim = length(TS.Longitude);
 TS.ydim = length(TS.Latitude);
 TS.zdim = length(TS.Depth);
 % determine number of monthly timesteps
-files = dir(fpath);
+files = dir([fpath '*.nc']);
+for t = 1:length(files)
+    file_date = cell2mat(extractBetween(files(t).name,'year_','.nc'));
+    file_year(t) = str2double(file_date(1:4));
+end
+idx1 = find(file_year == y1,1,'first');
+idx2 = find(file_year == y2,1,'last');
+% process time
 cnt = 1;
-for n = 1:length(files)
-    if contains(files(n).name,'.nc')
-        date = cell2mat(extractBetween(files(n).name,'year_','.nc'));
-        TS.years(cnt) = str2double(date(1:4));
-        TS.months(cnt) = str2double(date(12:13));
-        cnt = cnt+1;
-    end
+for n = idx1:idx2
+    date = cell2mat(extractBetween(files(n).name,'year_','.nc'));
+    TS.years(cnt) = str2double(date(1:4));
+    TS.months(cnt) = str2double(date(12:13));
+    cnt=cnt+1;
 end
 TS.years = TS.years';
 TS.months = TS.months';

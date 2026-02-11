@@ -156,13 +156,17 @@ parfor m = 1:length(TS.months)
         TS.Temperature = ncread([fpaths.temp_path ...
             'IAPv4_Temp_monthly_1_6000m_year_' num2str(TS.years(m)) ...
             '_month_' sprintf('%02d',TS.months(m)) '.nc'],...
-            'temp',[1 1 1],[Inf Inf idx_depth(end)]);
+            'temp',[1 1 1],[idx_depth(end) Inf Inf]);
         TS.Temperature(TS.Temperature==999) = NaN;
+        TS.Temperature = permute(TS.Temperature,[2 3 1]);
+        % turn off fill value mismatch warning
+        warning('off','MATLAB:imagesci:netcdf:fillValueTypeMismatch');
         TS.Salinity_abs = ncread([fpaths.sal_path ...
             'IAPv2_Salinity_monthly_1_6000m_year_' num2str(TS.years(m)) ...
             '_month_' sprintf('%02d',TS.months(m)) '.nc'],...
-            'salinity',[1 1 1],[Inf Inf idx_depth(end)]);
+            'salinity',[1 1 1],[idx_depth(end) Inf Inf]);
         TS.Salinity_abs(TS.Salinity_abs==999) = NaN;
+        TS.Salinity_abs = permute(TS.Salinity_abs,[2 3 1]);
     end
 
     % covert RG T and S to conservative Temperature and absolute Salinity
@@ -299,6 +303,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         end
         X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
         % assign predictors to clusters and obtain probabilities
+        warning('off','finance:internal:finance:ftseriesInputParser:SyntaxDeprecation');
         [~,~,p] = cluster(gmm,X_norm);
         GMM_probs = nan(size(TS_index));
         GMM_probs(TS_index) = int16(p(:,c)*10000);
