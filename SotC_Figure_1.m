@@ -52,9 +52,9 @@ mlabel off; plabel on; gridm off;
 plot_land('map','w');
 
 % add legend
-legend([mkr_pfl,mkr_osd,mkr_ctd],...
-    {'Profiling Floats (PFL)' 'Ocean Station Data (OSD)' ...
-    'CTD Sensor (CTD)'},'Location','northwest',...
+legend([mkr_osd,mkr_ctd,mkr_pfl],...
+    {'Ocean Station Data (OSD)' 'CTD Sensor (CTD)' ...
+    'Profiling Floats (PFL)'},'Location','northwest',...
     'FontSize',14,'NumColumns',1);
 
 % plot histogram
@@ -87,6 +87,7 @@ set(bar_chart,'FaceColor','Flat');
 bar_chart(4).CData = bar_chart(3).CData + 0.15;
 
 % adjust properties
+ylim([0 29]);
 ax2.TitleHorizontalAlignment = 'left';
 title('b) Annual number of O_{2} profiles by platform (1965-2025)',...
     'FontWeight','normal','FontSize',14);
@@ -94,9 +95,11 @@ ylabel({'Number of Profiles';'(in thousands)'},'FontSize',14);
 
 % add legend
 legend({'OSD' 'CTD' 'PFL[A]' 'PFL[D]'},'Location','northwest',...
-    'FontSize',14,'NumColumns',4);
+    'FontSize',14,'NumColumns',4,'Direction','normal');
 
 % save figure
 exportgraphics(gcf,['Figures/SotC_Fig1_' vrs '_dataset_histogram_' num2str(y1) '_' ...
     num2str(y2) '.png'],'Resolution',600);
+exportgraphics(gcf,['Figures/vectors/SotC_Fig1_' vrs '_dataset_histogram_' num2str(y1) '_' ...
+    num2str(y2) '.eps'],'Resolution',600,'ContentType','vector');
 close;
