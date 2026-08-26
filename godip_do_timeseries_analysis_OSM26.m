@@ -19,15 +19,15 @@ layers = {'50-1000' '0-1800' '0-50' '100-600'};
 lyr_top = [50 0 0 100]; lyr_bot = [1000 1800 50 600];
 inv_anom_lims = [-50 50]; inv_anom_levels = inv_anom_lims(1):10:inv_anom_lims(end);
 o2_inv_lims = [0,300;0,600;10,20;0,200];
-o2_inv_levels = {o2_inv_lims(1,1):20:o2_inv_lims(1,end);...
-    o2_inv_lims(2,1):40:o2_inv_lims(2,end);...
-    o2_inv_lims(3,1):0.5:o2_inv_lims(3,end);...
-    o2_inv_lims(4,1):10:o2_inv_lims(4,end)};
+o2_inv_levels = {o2_inv_lims(1,1):40:o2_inv_lims(1,end);...
+    o2_inv_lims(2,1):80:o2_inv_lims(2,end);...
+    o2_inv_lims(3,1):1:o2_inv_lims(3,end);...
+    o2_inv_lims(4,1):20:o2_inv_lims(4,end)};
 inv_trend_lims = [-3,3;-5,5;-0.2,0.2;-3,3];
-inv_trend_levels = {inv_trend_lims(1,1):0.25:inv_trend_lims(1,end);...
-    inv_trend_lims(2,1):0.5:inv_trend_lims(2,end);...
-    inv_trend_lims(3,1):0.02:inv_trend_lims(3,end);...
-    inv_trend_lims(4,1):0.25:inv_trend_lims(4,end)};
+inv_trend_levels = {inv_trend_lims(1,1):0.5:inv_trend_lims(1,end);...
+    inv_trend_lims(2,1):1:inv_trend_lims(2,end);...
+    inv_trend_lims(3,1):0.04:inv_trend_lims(3,end);...
+    inv_trend_lims(4,1):0.5:inv_trend_lims(4,end)};
 inv_anom_lims = [-15,15;-20,20;-1,1;-10,10];
 inv_anom_levels = {inv_anom_lims(1,1):1.5:inv_anom_lims(1,end);...
     inv_anom_lims(2,1):4:inv_anom_lims(2,end);...
@@ -564,13 +564,13 @@ for l = 1:length(layers)
         % plot inventory anomaly in 2025
         if ~any(any(~isnan(o2_inv_anom_2025)))
             continue; end % check for any values in 2025
-        figure('Position',[100 100 1200 600]);
+        figure('Position',[100 100 1200 600],'Visible','off');
         worldmap(lat_lims,lon_lims);
         title([labels{p} ' Oxygen Anomaly in ' num2str(year(anom_idx_2025)) ...
             ' from ' layers{l} ' meters (mol m^{-2})'],'FontSize',20);
-        pcolorm(lat-.25,[lon;lon(end)+1]-.25,...
+        pcolorm(lat-.5,[lon;lon(end)+1]-.5,...
             [o2_inv_anom_2025(:,:,l,p);o2_inv_anom_2025(end,:,l,p)]');
-        contourm(lat-.25,[lon;lon(end)+1]-.25,...
+        contourm(lat,[lon;lon(end)+1],...
             [o2_inv_anom_2025(:,:,l,p);o2_inv_anom_2025(end,:,l,p)]',...
             inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
         c = colorbar; clim(inv_anom_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
@@ -578,80 +578,290 @@ for l = 1:length(layers)
         plot_land('map',[1 1 1]);
         mlabel off; plabel off; gridm off;
         figname = ['Figures/o2_inv_anom_2025_' labels{p} '_' layers{l}];
-        export_fig([figname '.png'],'-transparent');
+        exportgraphics(gcf,[figname '.png']);
         close;
     end
     %% plot ensemble anomaly
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     title(['Oxygen Anomaly in 2025 from ' layers{l} ...
         ' meters (mol m^{-2})'],'FontSize',20);
-    pcolorm(lat-.25,[lon;lon(end)+1]-.25,...
-        mean([o2_inv_anom_2025(:,:,l,:);...
-        o2_inv_anom_2025(end,:,l,:)],4,'omitnan')');
-    contourm(lat-.25,[lon;lon(end)+1]-.25,...
-            mean([o2_inv_anom_2025(:,:,l,:);...
-            o2_inv_anom_2025(end,:,l,:)],4,'omitnan')',...
-            inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
+    ens_mean_anom_sig = mean(o2_inv_anom_2025(:,:,l,:),4,'omitnan');
+    ens_mean_anom_non = mean(o2_inv_anom_2025(:,:,l,:),4,'omitnan');
+    sum_pos = sum(o2_inv_anom_2025(:,:,l,:) > 0,4);
+    sum_neg = sum(o2_inv_anom_2025(:,:,l,:) < 0,4);
+    idx = sum_pos >= 6 | sum_neg >= 6;
+    ens_mean_anom_sig(~idx) = NaN; ens_mean_anom_non(idx) = NaN;
+    h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_anom_sig;ens_mean_anom_sig(end,:)]');
+    h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_anom_non;ens_mean_anom_non(end,:)]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_anom_sig;ens_mean_anom_sig(end,:)]',...
+        inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
     c = colorbar; clim(inv_anom_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
     figname = ['Figures/o2_ensemble_inv_anom_2025_' layers{l}];
-    export_fig([figname '.png'],'-transparent');
+    exportgraphics(gcf,[figname '.png']);
+    close;
+    %% plot ensemble anomaly (statistical interpolation)
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    title(['SI Oxygen Anomaly in 2025 from ' layers{l} ...
+        ' meters (mol m^{-2})'],'FontSize',20);
+    ens_mean_anom_sig = mean(o2_inv_anom_2025(:,:,l,1:5),4,'omitnan');
+    ens_mean_anom_non = mean(o2_inv_anom_2025(:,:,l,1:5),4,'omitnan');
+    sum_pos = sum(o2_inv_anom_2025(:,:,l,1:5) > 0,4);
+    sum_neg = sum(o2_inv_anom_2025(:,:,l,1:5) < 0,4);
+    idx = sum_pos >= 3 | sum_neg >= 3;
+    ens_mean_anom_sig(~idx) = NaN; ens_mean_anom_non(idx) = NaN;
+    h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_anom_sig;ens_mean_anom_sig(end,:)]');
+    h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_anom_non;ens_mean_anom_non(end,:)]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_anom_sig;ens_mean_anom_sig(end,:)]',...
+        inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
+    c = colorbar; clim(inv_anom_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
+    colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/o2_ensemble_inv_anom_SI_2025_' layers{l}];
+    exportgraphics(gcf,[figname '.png']);
+    close;
+    %% plot ensemble anomaly (machine learning)
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    title(['ML Oxygen Anomaly in 2025 from ' layers{l} ...
+        ' meters (mol m^{-2})'],'FontSize',20);
+    ens_mean_anom_sig = mean(o2_inv_anom_2025(:,:,l,6:9),4,'omitnan');
+    ens_mean_anom_non = mean(o2_inv_anom_2025(:,:,l,6:9),4,'omitnan');
+    sum_pos = sum(o2_inv_anom_2025(:,:,l,6:9) > 0,4);
+    sum_neg = sum(o2_inv_anom_2025(:,:,l,6:9) < 0,4);
+    idx = sum_pos >= 3 | sum_neg >= 3;
+    ens_mean_anom_sig(~idx) = NaN; ens_mean_anom_non(idx) = NaN;
+    h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_anom_sig;ens_mean_anom_sig(end,:)]');
+    h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_anom_non;ens_mean_anom_non(end,:)]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_anom_sig;ens_mean_anom_sig(end,:)]',...
+        inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
+    c = colorbar; clim(inv_anom_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
+    colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/o2_ensemble_inv_anom_2025_ML_' layers{l}];
+    exportgraphics(gcf,[figname '.png']);
     close;
 end
 
 %% plot trends on depth levels
 for d = 1:length(depth_indices)
     % plot each product trend individually
-    for p = 1:length(products)
-        figure('Position',[100 100 1200 600]);
-        worldmap(lat_lims,lon_lims);
-        set(gca,'Children');
-        title([labels{p} ' Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
-            ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
-        temp_mean_trend = o2_trend(:,:,depth_indices(d),p);
-        pcolorm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]');
-        contourm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]',...
-            trend_levels,'k','LineWidth',1,'ShowText','off');
-        c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
-        colormap(cmocean('balance',length(trend_levels)-1,'pivot',0));
-        plot_land('map',[1 1 1]);
-        mlabel off; plabel off; gridm off;
-        figname = ['Figures/o2_trend_' labels{p} '_' ...
-            num2str(depth(depth_indices(d)))];
-        export_fig([figname '.png'],'-transparent');
-        figname = ['Figures/vectors/o2_trend_' labels{p} '_' ...
-            num2str(depth(depth_indices(d)))];
-        exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
-        close;
-    end
+    % for p = 1:length(products)
+    %     figure('Position',[100 100 1200 600],'Visible','off');
+    %     worldmap(lat_lims,lon_lims);
+    %     set(gca,'Children');
+    %     title([labels{p} ' Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+    %         ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
+    %     temp_mean_trend = o2_trend(:,:,depth_indices(d),p);
+    %     pcolorm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]');
+    %     contourm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]',...
+    %         trend_levels,'k','LineWidth',1,'ShowText','off');
+    %     c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+    %     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    %     plot_land('map',[1 1 1]);
+    %     mlabel off; plabel off; gridm off;
+    %     figname = ['Figures/o2_trend_OSM26_' labels{p} '_' ...
+    %         num2str(depth(depth_indices(d)))];
+    %     exportgraphics(gcf,[figname '.png']);
+    %     close;
+    % end
     % plot ensemble mean trend
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     set(gca,'Children');
     title(['Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
         ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
-    ens_mean_trend = mean(o2_trend(:,:,depth_indices(d),:),4,'omitnan');
+    ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),:),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),:),4,'omitnan');
     sum_pos = sum(o2_trend(:,:,depth_indices(d),:) > 0,4);
     sum_neg = sum(o2_trend(:,:,depth_indices(d),:) < 0,4);
-    idx = sum_pos >= 7 | sum_neg >= 7; ens_mean_trend(~idx) = NaN;
-    pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend(1,:);ens_mean_trend]');
-    contourm(lat,[lon;lon(end)+1],[ens_mean_trend(1,:);ens_mean_trend]',...
+    idx = sum_pos >= 7 | sum_neg >= 7;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
         trend_levels,'k','LineWidth',1,'ShowText','off');
-    stipplem(lat,lon,~idx','density',300);
+    hatchfill2(h2,'cross');
     c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
-    colormap(cmocean('balance',length(trend_levels),'pivot',0));
+    colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_' ...
+    figname = ['Figures/ensemble_mean_o2_trend_OSM26_' ...
         num2str(depth(depth_indices(d)))];
-    export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/vectors/ensemble_mean_o2_trend_ ' ...
-        num2str(depth(depth_indices(d)))];
-    exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+    exportgraphics(gcf,[figname '.png']);
     close;
+    % plot ensemble mean trend (SI)
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    set(gca,'Children');
+    title(['SI Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+        ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
+    ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),si_indices),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),si_indices),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,depth_indices(d),si_indices) > 0,4);
+    sum_neg = sum(o2_trend(:,:,depth_indices(d),si_indices) < 0,4);
+    idx = sum_pos >= 4 | sum_neg >= 4;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
+    c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/ensemble_mean_o2_trend_SI_' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.png']);
+    close;
+    % plot ensemble mean trend (machine learning)
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    set(gca,'Children');
+    title(['ML Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+        ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
+    ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),ml_indices),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),ml_indices),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,depth_indices(d),ml_indices) > 0,4);
+    sum_neg = sum(o2_trend(:,:,depth_indices(d),ml_indices) < 0,4);
+    idx = sum_pos >= 3 | sum_neg >= 3;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
+    c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/ensemble_mean_o2_trend_ML_' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.png']);
+    close;    
+end
+
+%% plot trend animation on depth levels
+% figure names
+fname_all = 'Figures/ensemble_mean_o2_trend_OSM26_anim.gif';
+fname_si = 'Figures/ensemble_mean_o2_trend_si_OSM26_anim.gif';
+fname_ml = 'Figures/ensemble_mean_o2_trend_ml_OSM26_anim.gif';
+% establish figres
+for d = 1:length(depth)
+    % plot ensemble mean trend
+    fig = figure('Position',[100 100 1200 600],'Visible','off');
+    ax = worldmap(lat_lims,lon_lims);
+    title(ax,[num2str(depth(d)) ' m'],'FontSize',20);
+    ens_mean_trend_sig = mean(o2_trend(:,:,d,:),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,d,:),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,d,:) > 0,4);
+    sum_neg = sum(o2_trend(:,:,d,:) < 0,4);
+    idx = sum_pos >= 7 | sum_neg >= 7;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    warning('off','MATLAB:nearlySingularMatrix')
+    hatchfill2(h1,'cross');
+    c = colorbar; clim(ax,trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(ax,flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    if d == 1; exportgraphics(fig,fname_all,'Append',false); else
+        exportgraphics(fig,fname_all,'Append',true); end
+    % capture frame
+    % frame = getframe(fig); im = frame2im(frame); imind = rgb2ind(im,256);
+    % if d == 1; imwrite(fig,fname_all,'Loopcount',inf,'DelayTime',0.5); else
+    %     imwrite(fig,fname_all,'WriteMode','append','DelayTime',0.5); end
+    % close;
+    % % plot ensemble mean trend (SI)
+    % fig = figure('Position',[100 100 1200 600],'Visible','off');
+    % ax = worldmap(lat_lims,lon_lims);
+    % title(ax,[num2str(depth(d)) ' m'],'FontSize',20);
+    % ens_mean_trend_sig = mean(o2_trend(:,:,d,1:5),4,'omitnan');
+    % ens_mean_trend_non = mean(o2_trend(:,:,d,1:5),4,'omitnan');
+    % sum_pos = sum(o2_trend(:,:,d,1:5) > 0,4);
+    % sum_neg = sum(o2_trend(:,:,d,1:5) < 0,4);
+    % idx = sum_pos >= 7 | sum_neg >= 7;
+    % ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    % pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    % h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    % contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+    %     trend_levels,'k','LineWidth',1,'ShowText','off');
+    % warning('off','MATLAB:nearlySingularMatrix')
+    % hatchfill2(h1,'cross');
+    % c = colorbar; clim(ax,trend_lims); c.FontSize = 16; c.TickLength = 0;
+    % colormap(ax,flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    % plot_land('map',[1 1 1]);
+    % mlabel off; plabel off; gridm off;
+    % if d == 1; exportgraphics(fig,fname_si,'Append',false); else
+    % exportgraphics(fig,fname_si,'Append',true); end
+    % close;
+    % % plot ensemble mean trend (machine learning)
+    % fig = figure('Position',[100 100 1200 600],'Visible','off');
+    % ax = worldmap(lat_lims,lon_lims);
+    % title(ax,[num2str(depth(d)) ' m'],'FontSize',20);
+    % ens_mean_trend_sig = mean(o2_trend(:,:,d,6:9),4,'omitnan');
+    % ens_mean_trend_non = mean(o2_trend(:,:,d,6:9),4,'omitnan');
+    % sum_pos = sum(o2_trend(:,:,d,6:9) > 0,4);
+    % sum_neg = sum(o2_trend(:,:,d,6:9) < 0,4);
+    % idx = sum_pos >= 7 | sum_neg >= 7;
+    % ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    % pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    % h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    % contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+    %     trend_levels,'k','LineWidth',1,'ShowText','off');
+    % warning('off','MATLAB:nearlySingularMatrix')
+    % hatchfill2(h1,'cross');
+    % c = colorbar; clim(ax,trend_lims); c.FontSize = 16; c.TickLength = 0;
+    % colormap(ax,flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    % plot_land('map',[1 1 1]);
+    % mlabel off; plabel off; gridm off;
+    % if d == 1; exportgraphics(fig,fname_ml,'Append',false); else
+    % exportgraphics(fig,fname_ml,'Append',true); end
+    % close;
+end
+
+%% plot standard deviation animation on depth levels
+% figure names
+fname_all = 'Figures/ensemble_mean_o2_stdev_OSM26_anim.gif';
+fname_si = 'Figures/ensemble_mean_o2_stdev_si_OSM26_anim.gif';
+fname_ml = 'Figures/ensemble_mean_o2_stdev_ml_OSM26_anim.gif';
+% establish figres
+for d = 1:length(depth)
+    % plot ensemble mean trend
+    fig = figure('Position',[100 100 1200 600],'Visible','off');
+    ax = worldmap(lat_lims,lon_lims);
+    title(ax,[num2str(depth(d)) ' m'],'FontSize',20);
+    ens_std_sig = std(o2_mean(:,:,d,:),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,d,:),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,d,:) > 0,4);
+    sum_neg = sum(o2_trend(:,:,d,:) < 0,4);
+    idx = sum_pos >= 7 | sum_neg >= 7;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    warning('off','MATLAB:nearlySingularMatrix')
+    hatchfill2(h1,'cross');
+    c = colorbar; clim(ax,trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(ax,flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    if d == 1; exportgraphics(fig,fname_all,'Append',false); else
+        exportgraphics(fig,fname_all,'Append',true); end
 end
 
 %% plot seasonal cycle
@@ -710,7 +920,7 @@ end
 % end
 
 %% plot timeseries
-for l = 1:length(layers)
+for l = 2%1:length(layers)
     for included_products = 1:3
         figure('Position',[100 100 800 300]); hold on; box on; grid on;
         set(gca,'TitleHorizontalAlignment','left');
@@ -743,8 +953,8 @@ for l = 1:length(layers)
         end
         ylabel({'O_{2} Inventory Anomaly';['(Pmol, ' layers{l} 'm)']});
         xlim([datenum(1964,12,31) datenum(2026,1,1)]);
-        datetick('x','keeplimits');
-        figname = ['Figures/mean_inv_o2_' layers{l}];
+        datetick('x','keeplimits'); ylim([-3 2]);
+        figname = ['Figures/mean_inv_o2_OSM26_' layers{l}];
         if included_products == 1
             legend([{''} labels],'NumColumns',3,'Location','southwest');
             export_fig([figname '.png'],'-transparent');
@@ -758,30 +968,6 @@ for l = 1:length(layers)
         close;
     end
 end
-
-%% plot timeseries
-for l = 1:length(layers)
-    figure('Position',[100 100 800 300]); hold on;
-    title(['O_{2} Inventory Anomaly (' layers{l} ' meters)']);
-    plot(time,repmat(0,length(time),1),'k--');
-    for p = 6:7
-        if p <= 5
-            plot(time,o2_inv_ts(:,p,l)-mean(o2_inv_ts(:,p,l),...
-                'omitnan'),'linewidth',2,'LineStyle','-');
-        else
-            plot(time,o2_inv_ts(:,p,l)-mean(o2_inv_ts(:,p,l),...
-                'omitnan'),'linewidth',2,'LineStyle','--');
-        end
-    end
-    ylabel('O_{2} Inventory Anomaly (Pmol)');
-    xlim([datenum(1964,12,31) datenum(2026,1,1)]);
-    datetick('x','keeplimits');
-    legend([{''} labels{6:7}],'NumColumns',3,'Location','southwest');
-    figname = ['Figures/mean_inv_o2_EN4_vs_IAP_' layers{l}];
-    export_fig([figname '.png'],'-transparent');
-    close;
-end
-
 
 %% plot standard deviation products
 % OI
@@ -801,7 +987,7 @@ colorbar;
 % create figure
 stip = false; stip_dens = 200; sig_prods = 7;
 plt_alpha = 1; plt_bkgr = 'w';
-figure('Position',[100 100 1200 1000],'visible','on','Color','w');
+figure('Position',[100 100 1300 1000],'visible','off','Color','w');
 SotC_fig = tiledlayout(3,2,'TileSpacing','tight','Padding','none');
 ax1 = nexttile; % inventory from 10-50m
 idx_l = find(strcmp(layers,'0-50'));
@@ -813,8 +999,11 @@ title(['a) Oxygen Inventory from ' num2str(lyr_top(idx_l)) ...
     'FontWeight','normal','FontSize',12);
 pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[mean(o2_inv_mean(:,:,:,idx_l),3,'omitnan');...
     mean(o2_inv_mean(end,:,:,idx_l),3,'omitnan')]');
+contourm(lat,[lon;lon(end)+1],[mean(o2_inv_mean(:,:,:,idx_l),3,'omitnan');...
+    mean(o2_inv_mean(end,:,:,idx_l),3,'omitnan')]',o2_inv_levels{idx_l,:},...
+    'k','LineWidth',1,'ShowText','off');
 c = colorbar; clim(o2_inv_lims(idx_l,:)); c.TickLength = 0;
-colormap(ax1,customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_inv_levels{idx_l,:})-1));
+colormap(ax1,customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_inv_levels{idx_l,:})*2));
 plot_land('map',[1 1 1]);
 mlabel off; plabel off; gridm off;
 ax2 = nexttile; % inventory from 100-1000
@@ -827,8 +1016,11 @@ title(['b) Oxygen Inventory from ' num2str(lyr_top(idx_l)) ...
     'FontWeight','normal','FontSize',12);
 pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[mean(o2_inv_mean(:,:,:,idx_l),3);...
     mean(o2_inv_mean(end,:,:,idx_l),3,'omitnan')]');
+contourm(lat,[lon;lon(end)+1],[mean(o2_inv_mean(:,:,:,idx_l),3,'omitnan');...
+    mean(o2_inv_mean(end,:,:,idx_l),3,'omitnan')]',o2_inv_levels{idx_l,:},...
+    'k','LineWidth',1,'ShowText','off');
 c = colorbar; clim(o2_inv_lims(idx_l,:)); c.TickLength = 0;
-colormap(ax2,customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_inv_levels{idx_l,:})-1));
+colormap(ax2,customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_inv_levels{idx_l,:})*2));
 plot_land('map',[1 1 1]);
 mlabel off; plabel off; gridm off;
 ax3 = nexttile; % inventory trend from 10-50
@@ -839,7 +1031,6 @@ setm(ax3,'MapProjection','miller','FFaceColor',plt_bkgr); tightmap;
 title(['c) Oxygen Inventory Trend from ' num2str(lyr_top(idx_l)) ...
     ' to ' num2str(lyr_bot(idx_l)) ' m (mol m^{-2} dec.^{-1})'],...
     'FontWeight','normal','FontSize',12);
-ens_mean_trend = mean(o2_inv_trend(:,:,:,idx_l),3,'omitnan');
 ens_mean_trend_sig = mean(o2_inv_trend(:,:,:,idx_l),3,'omitnan');
 ens_mean_trend_non = mean(o2_inv_trend(:,:,:,idx_l),3,'omitnan');
 sum_pos = sum(o2_inv_trend(:,:,:,idx_l) > 0,3);
@@ -848,12 +1039,14 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_non;ens_mean_trend_non(end,:)]');
+contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]',...
+    inv_trend_levels{idx_l,:},'k','LineWidth',1,'ShowText','off');
 warning('off','MATLAB:nearlySingularMatrix')
 hatchfill2(h2,'cross');
 if stip; stipplem(lat,lon,~idx' & ~isnan(ens_mean_trend)',...
         'density',stip_dens,'color',[.5 .5 .5]); end
 c = colorbar; clim(inv_trend_lims(idx_l,:)); c.TickLength = 0;
-colormap(ax3,flipud(cmocean('balance',length(inv_trend_levels{idx_l,:})-1,'pivot',0)));
+colormap(ax3,flipud(cmocean('balance',length(inv_trend_levels{idx_l,:})*2,'pivot',0)));
 plot_land('map',[1 1 1]);
 mlabel off; plabel off; gridm off;
 ax4 = nexttile; % inventory trend from 100 to 1000
@@ -864,7 +1057,6 @@ setm(ax4,'MapProjection','miller','FFaceColor',plt_bkgr); tightmap;
 title(['d) Oxygen Inventory Trend from ' num2str(lyr_top(idx_l)) ...
     ' to ' num2str(lyr_bot(idx_l)) ' m (mol m^{-2} dec.^{-1})'],...
     'FontWeight','normal','FontSize',12);
-ens_mean_trend = mean(o2_inv_trend(:,:,:,idx_l),3,'omitnan');
 ens_mean_trend_sig = mean(o2_inv_trend(:,:,:,idx_l),3,'omitnan');
 ens_mean_trend_non = mean(o2_inv_trend(:,:,:,idx_l),3,'omitnan');
 sum_pos = sum(o2_inv_trend(:,:,:,idx_l) > 0,3);
@@ -873,12 +1065,14 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_non;ens_mean_trend_non(end,:)]');
+contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]',...
+    inv_trend_levels{idx_l,:},'k','LineWidth',1,'ShowText','off');
 warning('off','MATLAB:nearlySingularMatrix');
 hatchfill2(h2,'cross');
 if stip; stipplem(lat,lon,~idx' & ~isnan(ens_mean_trend)',...
         'density',stip_dens,'color',[.5 .5 .5]); end
 c = colorbar; clim(inv_trend_lims(idx_l,:)); c.TickLength = 0;
-colormap(ax4,flipud(cmocean('balance',length(inv_trend_levels{idx_l,:})-1,'pivot',0)));
+colormap(ax4,flipud(cmocean('balance',length(inv_trend_levels{idx_l,:})*2,'pivot',0)));
 plot_land('map',[1 1 1]);
 mlabel off; plabel off; gridm off;
 ax5 = nexttile([1 2]); % timeseries
@@ -909,7 +1103,9 @@ for p = 1:length(products)
     end
 end
 % ylabel('O_{2} Inventory Anomaly (Pmol)');
-xlim([min(time) max(time)]); datetick('x','keeplimits'); 
+xlim([min(time) max(time)]); datetick('x','keeplimits'); xtickangle(0);
+xticklabels({'1965' '' '1970' '' '1975' '' '1980' '' '1985' '' '1990' '' '1995' ...
+    '' '2000' '' '2005' '' '2010' '' '2015' '' '2020' '' '2025'});
 legend([{''} labels],'NumColumns',3,'Location','southwest');
 hold off
 % save figure
@@ -924,19 +1120,18 @@ close;
 
 %% plot SoTC Figure 3
 % create figure
-stip = false; stip_dens = 200; sig_prods = 5;
+stip = false; stip_dens = 200; sig_prods = 6;
 plt_alpha = 0.6; plt_bkgr = 'w';
-figure('Position',[100 100 1400 1050],'visible','off','Color','w');
+figure('Position',[100 100 1400 1000],'visible','off','Color','w');
 SotC_fig = tiledlayout(3,4,'TileSpacing','tight','Padding','none');
 ax1 = nexttile([1 2]); % anomaly at 10
 idx_l = find(strcmp(layers,'0-50'));
 worldmap(lat_lims,lon_lims);
-set(ax1,'FontSize',12,'LineWidth',2,'TitleHorizontalAlignment','left');
+set(ax1,'FontSize',12.5,'LineWidth',2,'TitleHorizontalAlignment','left');
 setm(ax1,'MapProjection','miller','FFaceColor',plt_bkgr); tightmap;
-title(['a) 2025 Inventory Anomaly from ' num2str(lyr_top(idx_l)) ...
+title(['a) 2025 Oxygen Inventory Anomaly from ' num2str(lyr_top(idx_l)) ...
     ' to ' num2str(lyr_bot(idx_l)) ' m (mol m^{-2})'],...
-    'FontWeight','normal','FontSize',12);
-ens_inv_anom = mean(o2_inv_anom_2025(:,:,idx_l,:),4,'omitnan');
+    'FontWeight','normal','FontSize',12.5);
 ens_inv_anom_sig = mean(o2_inv_anom_2025(:,:,idx_l,:),4,'omitnan');
 ens_inv_anom_non = mean(o2_inv_anom_2025(:,:,idx_l,:),4,'omitnan');
 sum_pos = sum(o2_inv_anom_2025(:,:,idx_l,:) > 0,4);
@@ -945,22 +1140,24 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_inv_anom_sig(~idx) = NaN; ens_inv_anom_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_anom_sig;ens_inv_anom_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_anom_non;ens_inv_anom_non(end,:)]');
+contourm(lat,[lon;lon(end)+1],[ens_inv_anom_sig;ens_inv_anom_sig(end,:)]',...
+        inv_anom_levels{idx_l,:},'k','LineWidth',1,'ShowText','off');
 warning('off','MATLAB:nearlySingularMatrix')
 hatchfill2(h2,'cross');
 if stip; stipplem(lat,lon,~idx' & ~isnan(ens_inv_anom)',...
         'density',stip_dens,'color',[.5 .5 .5]); end
 c = colorbar; clim(inv_anom_lims(idx_l,:)); c.TickLength = 0;
-colormap(ax1,flipud(cmocean('balance',length(inv_trend_levels{idx_l,:})-1,'pivot',0)));
+colormap(ax1,flipud(cmocean('balance',length(inv_anom_levels{idx_l,:})-1,'pivot',0)));
 plot_land('map',[1 1 1]);
 mlabel off; plabel off; gridm off;
 ax2 = nexttile([1 2]); % anomaly at 10
 idx_l = find(strcmp(layers,'50-1000'));
 worldmap(lat_lims,lon_lims);
-set(ax2,'FontSize',12,'LineWidth',2,'TitleHorizontalAlignment','left');
+set(ax2,'FontSize',12.5,'LineWidth',2,'TitleHorizontalAlignment','left');
 setm(ax2,'MapProjection','miller','FFaceColor',plt_bkgr); tightmap;
-title(['b) 2025 Inventory Anomaly from ' num2str(lyr_top(idx_l)) ...
+title(['b) 2025 Oxygen Inventory Anomaly from ' num2str(lyr_top(idx_l)) ...
     ' to ' num2str(lyr_bot(idx_l)) ' m (mol m^{-2})'],...
-    'FontWeight','normal','FontSize',12);
+    'FontWeight','normal','FontSize',12.5);
 ens_inv_anom = mean(o2_inv_anom_2025(:,:,idx_l,:),4,'omitnan');
 ens_inv_anom_sig = mean(o2_inv_anom_2025(:,:,idx_l,:),4,'omitnan');
 ens_inv_anom_non = mean(o2_inv_anom_2025(:,:,idx_l,:),4,'omitnan');
@@ -970,6 +1167,8 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_inv_anom_sig(~idx) = NaN; ens_inv_anom_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_anom_sig;ens_inv_anom_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_anom_non;ens_inv_anom_non(end,:)]');
+contourm(lat,[lon;lon(end)+1],[ens_inv_anom_sig;ens_inv_anom_sig(end,:)]',...
+        inv_anom_levels{idx_l,:},'k','LineWidth',1,'ShowText','off');
 warning('off','MATLAB:nearlySingularMatrix')
 hatchfill2(h2,'cross');
 if stip; stipplem(lat,lon,~idx' & ~isnan(ens_inv_anom)',...
@@ -981,12 +1180,11 @@ mlabel off; plabel off; gridm off;
 ax3 = nexttile([1 2]); % anomaly at 10
 idx_l = find(strcmp(layers,'0-50'));
 worldmap(lat_lims,lon_lims);
-set(ax3,'FontSize',12,'LineWidth',2,'TitleHorizontalAlignment','left');
+set(ax3,'FontSize',12.5,'LineWidth',2,'TitleHorizontalAlignment','left');
 setm(ax3,'MapProjection','miller','FFaceColor',plt_bkgr); tightmap;
-title(['c) 2025' char(8722) '2024 Inventory from ' num2str(lyr_top(idx_l)) ...
+title(['c) 2025' char(8722) '2024 Inventory Difference from ' num2str(lyr_top(idx_l)) ...
     ' to ' num2str(lyr_bot(idx_l)) ' m (mol m^{-2})'],...
-    'FontWeight','normal','FontSize',12);
-ens_inv_diff = mean(o2_inv_diff_2025_2024(:,:,idx_l,:),4,'omitnan');
+    'FontWeight','normal','FontSize',12.5);
 ens_inv_diff_sig = mean(o2_inv_diff_2025_2024(:,:,idx_l,:),4,'omitnan');
 ens_inv_diff_non = mean(o2_inv_diff_2025_2024(:,:,idx_l,:),4,'omitnan');
 sum_pos = sum(o2_inv_diff_2025_2024(:,:,idx_l,:) > 0,4);
@@ -995,10 +1193,10 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_inv_diff_sig(~idx) = NaN; ens_inv_diff_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_diff_sig;ens_inv_diff_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_diff_non;ens_inv_diff_non(end,:)]');
+contourm(lat,[lon;lon(end)+1],[ens_inv_diff_sig;ens_inv_diff_sig(end,:)]',...
+        inv_anom_levels{idx_l,:},'k','LineWidth',1,'ShowText','off');
 warning('off','MATLAB:nearlySingularMatrix')
 hatchfill2(h2,'cross');
-if stip; stipplem(lat,lon,~idx' & ~isnan(ens_inv_diff)',...
-        'density',stip_dens,'color',[.5 .5 .5]); end
 c = colorbar; clim(inv_anom_lims(idx_l,:)); c.TickLength = 0;
 colormap(ax3,flipud(cmocean('balance',length(inv_anom_levels{idx_l,:})-1,'pivot',0)));
 plot_land('map',[1 1 1]);
@@ -1006,12 +1204,11 @@ mlabel off; plabel off; gridm off;
 ax4 = nexttile([1 2]); % anomaly at 10
 idx_l = find(strcmp(layers,'50-1000'));
 worldmap(lat_lims,lon_lims);
-set(ax4,'FontSize',12,'LineWidth',2,'TitleHorizontalAlignment','left');
+set(ax4,'FontSize',12.5,'LineWidth',2,'TitleHorizontalAlignment','left');
 setm(ax4,'MapProjection','miller','FFaceColor',plt_bkgr); tightmap;
-title(['d) 2025' char(8722) '2024 Inventory from ' num2str(lyr_top(idx_l)) ...
+title(['d) 2025' char(8722) '2024 Inventory Difference from ' num2str(lyr_top(idx_l)) ...
     ' to ' num2str(lyr_bot(idx_l)) ' m (mol m^{-2})'],...
-    'FontWeight','normal','FontSize',12);
-ens_inv_diff = mean(o2_inv_diff_2025_2024(:,:,idx_l,:),4,'omitnan');
+    'FontWeight','normal','FontSize',12.5);
 ens_inv_diff_sig = mean(o2_inv_diff_2025_2024(:,:,idx_l,:),4,'omitnan');
 ens_inv_diff_non = mean(o2_inv_diff_2025_2024(:,:,idx_l,:),4,'omitnan');
 sum_pos = sum(o2_inv_diff_2025_2024(:,:,idx_l,:) > 0,4);
@@ -1020,11 +1217,12 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_inv_diff_sig(~idx) = NaN; ens_inv_diff_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_diff_sig;ens_inv_diff_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_inv_diff_non;ens_inv_diff_non(end,:)]');
+contourm(lat,[lon;lon(end)+1],[ens_inv_diff_sig;ens_inv_diff_sig(end,:)]',...
+        inv_anom_levels{idx_l,:},'k','LineWidth',1,'ShowText','off');
 warning('off','MATLAB:nearlySingularMatrix')
 hatchfill2(h2,'cross');
-if stip; stipplem(lat,lon,~idx' & ~isnan(ens_inv_diff)',...
-        'density',stip_dens,'color',[.5 .5 .5]); end
-c = colorbar; clim(inv_anom_lims(idx_l,:)); c.TickLength = 0; colormap(ax4,flipud(cmocean('balance',length(inv_trend_levels{idx_l,:})-1,'pivot',0)));
+c = colorbar; clim(inv_anom_lims(idx_l,:)); c.TickLength = 0;
+colormap(ax4,flipud(cmocean('balance',length(inv_anom_levels{idx_l,:})-1,'pivot',0)));
 plot_land('map',[1 1 1]);
 mlabel off; plabel off; gridm off;
 %
@@ -1032,10 +1230,10 @@ ax5 = nexttile([1 3]); % timeseries
 hold on; box on;
 contourf(time,depth,squeeze(mean(o2_inv_depth_ts,2,'omitnan'))'-...
     mean(squeeze(mean(o2_inv_depth_ts,2,'omitnan')),1,'omitnan')',-6:0.5:6);
-set(ax5,'YDir','reverse','FontSize',12,'LineWidth',2,'TitleHorizontalAlignment','left');
+set(ax5,'YDir','reverse','FontSize',12.5,'LineWidth',2,'TitleHorizontalAlignment','left');
 ylim(ax5,[1 1800]);
 title('e) Global Oxygen Anomalies (\mumol kg^{-1})',...
-    'FontWeight','normal','FontSize',12);
+    'FontWeight','normal','FontSize',12.5);
 c = colorbar; clim([-6 6]); c.TickLength = 0;
 colormap(ax5,flipud(cmocean('balance',24,'pivot',0)));
 ylabel('Depth (m)');
@@ -1062,12 +1260,13 @@ fill([ens_mean_trend_by_depth-ens_std_trend_by_depth;...
     flipud(ens_mean_trend_by_depth+ens_std_trend_by_depth)],...
     [depth;flipud(depth)],'k','FaceAlpha',0.5,'LineStyle','none');
 plot(ens_mean_trend_by_depth,depth,'linewidth',2,'Color','k');
+yticklabels(ax7,{});
 xlim([-1.7 0]); ylim([1 1800]); 
 text(-0.65,1400,{'ensemble';'mean trend';'(\mumol kg^{-1} dec.^{-1})'},...
     'FontSize',8,'HorizontalAlignment','right');
 text(-1.5,1000,{'ensemble';'mean';'(\mumol kg^{-1})'},...
     'FontSize',8,'Color','r');
-text(-1.9,-30,'f)','FontSize',12);
+text(-1.9,-30,'f)','FontSize',12.5);
 % save figure
 if stip; figname = 'Figures/SotC_Fig3_stipple';
 else; figname = 'Figures/SotC_Fig3'; end
@@ -1129,7 +1328,7 @@ idx = sum_pos >= sig_prods | sum_neg >= sig_prods;
 ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN; 
 h1=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_sig;ens_mean_trend_sig(end,:)]');
 h2=pcolorm(lat-0.5,[lon;lon(end)+1]-0.5,[ens_mean_trend_non;ens_mean_trend_non(end,:)]');
-warning('off','MATLAB:nearlySingularMatrix')
+warning('off','MATLAB:nearlySingularMatrix');
 hatchfill2(h2,'cross');
 if stip; stipplem(lat,lon,~idx' & ~isnan(ens_mean_trend)',...
         'density',stip_dens,'color',[.5 .5 .5]); end

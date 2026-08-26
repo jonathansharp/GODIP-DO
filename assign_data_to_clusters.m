@@ -8,7 +8,7 @@
 %
 % DATE: 10/05/2023
 
-function assign_data_to_clusters(param_props,base_grid,snap_date,float_file_ext,...
+function assign_data_to_clusters(param_props,snap_date,float_file_ext,...
     clust_vars,num_clusters,start_year,end_year,vrs)
 
 %% process date
@@ -16,11 +16,21 @@ date_str = num2str(snap_date);
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 
 %% load combined data
-load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+try % try loading matlab file (normal)
+    load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+catch % if error, load NetCDF
+    fname = ['O2/Data/' vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.nc'];
+    nc_inf = ncinfo(fname);
+    for v = 1:length(nc_inf.Variables)
+        all_data.(nc_inf.Variables(v).Name) = ...
+            ncread(fname,nc_inf.Variables(v).Name);
+    end
+end
 
 %% assign data points and probabilities to clusters
 % load GMM model
-load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str]);
+load([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' date_str]);
 % transform to normalized arrays
 predictor_matrix = [];
 for v = 1:length(clust_vars)
@@ -36,7 +46,7 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
+save([param_props.dir_name '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
 % display information
-disp(['data assigned to ' num2str(num_clusters) ' clusters on ' base_grid]);
+disp(['data assigned to ' num2str(num_clusters) ' clusters']);
