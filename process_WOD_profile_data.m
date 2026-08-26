@@ -16,7 +16,7 @@ vars_other = {'Temperature' 'Salinity'};
 vars_both = [vars_o2 vars_other];
 % pre-allocate
 for v = 1:length(vars_both); all_data.(vars_both{v}) = []; end
-all_data.type = []; idx_mode = [];
+all_data.type = []; all_data.mode = []; idx_mode = [];
 % load oxygen variables
 for y = y1:y2
     for x = 1:length(types)
@@ -31,6 +31,8 @@ for y = y1:y2
             end
             if strcmp(types{x},'PFL') & strcmp(vrs,'WOD25')
                 all_data_temp.mode = ncread(file,'mode');
+            else
+                all_data_temp.mode = repmat(2,size(all_data_temp.(vars_o2{v})));
             end
             % temp
             file = [folder '/Temperature_' types{x} '_' nc_label '/Temperature_' types{x} '_' num2str(y) '.nc'];
@@ -41,11 +43,7 @@ for y = y1:y2
             all_data_temp.Salinity = ncread(file,'Salinity');
             all_data_temp.sal_profile = ncread(file,'profile');
             % index for data mode
-            if strcmp(types{x},'PFL') & strcmp(vrs,'WOD25')
-                all_data_temp.idx_mode = (all_data_temp.mode == 2 | all_data_temp.mode == 3);
-            else
-                all_data_temp.idx_mode = true(size(all_data_temp.profile));
-            end
+            all_data_temp.idx_mode = (all_data_temp.mode == 2 | all_data_temp.mode == 3);
             % indices to ensure all profiles have O2, temp, and sal
             idx_o2 = ismember(all_data_temp.profile,all_data_temp.temp_profile) & ...
                 ismember(all_data_temp.profile,all_data_temp.sal_profile);
@@ -66,7 +64,7 @@ for y = y1:y2
                 end
             end
             all_data_temp.idx_mode = repmat(all_data_temp.idx_mode(idx_o2)',length(idx_depth),1);
-            all_data_temp.Temperature = all_data_temp.Temperature(idx_depth,idx_temp);
+            all_data_temp.mode = repmat(all_data_temp.mode(idx_o2)',length(idx_depth),1);all_data_temp.Temperature = all_data_temp.Temperature(idx_depth,idx_temp);
             all_data_temp.Salinity = all_data_temp.Salinity(idx_depth,idx_sal);
             % add values to vector
             idx = ~isnan(all_data_temp.Oxygen);
@@ -76,6 +74,11 @@ for y = y1:y2
             idx_mode = [idx_mode;all_data_temp.idx_mode(idx)];
             % type: CTD=1 OSD=2 PFL=3
             all_data.type = [all_data.type;repmat(x,sum(idx(:)),1)];
+            try
+            all_data.mode = [all_data.mode;all_data_temp.mode(idx)];
+            catch
+                keyboard
+            end
         end
     end
 end
@@ -127,7 +130,7 @@ all_data.Oxygen_uncorrected = all_data.Oxygen;
 idx_float = all_data.type == 3;
 
 % adjust float data according to GOBAI-O2 float correction (July)
-load('/home/sockeye/sharp/GOBAI/O2/Data/float_corr_Jul-2025_D');
+load('O2/Data/float_corr_Jul-2025_D');
 all_data.Oxygen(idx_float) = double(((all_data.Oxygen_sat_per(idx_float) - ...
     (slp .* all_data.Oxygen_sat(idx_float) + int))./100) .* ...
     all_data.Oxygen_sat(idx_float));

@@ -53,9 +53,10 @@ grid_types = {'regridded' 'native_grid' 'native_grid' 'native_grid' 'native_grid
 wod_vrs = 'WOD25';
 
 %% Import data
-% process_WOD_profile_data(start_year,end_year,wod_vrs);
+process_WOD_profile_data(start_year,end_year,wod_vrs);
 % % plot data histogram by year
-% plot_data_hist(start_year,end_year,wod_vrs);
+plot_data_hist(start_year,end_year,wod_vrs);
+plot_data_map(start_year,end_year,wod_vrs);
 
 %% create time-varying clusters and assign data points to them
 % % form clusters

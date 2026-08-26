@@ -95,7 +95,7 @@ ylabel({'Number of Profiles';'(in thousands)'},'FontSize',14);
 
 % add legend
 legend({'OSD' 'CTD' 'PFL[A]' 'PFL[D]'},'Location','northwest',...
-    'FontSize',14,'NumColumns',4,'Direction','normal');
+    'FontSize',14,'NumColumns',4);
 
 % save figure
 exportgraphics(gcf,['Figures/SotC_Fig1_' vrs '_dataset_histogram_' num2str(y1) '_' ...

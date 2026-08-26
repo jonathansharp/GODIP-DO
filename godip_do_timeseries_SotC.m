@@ -3,8 +3,10 @@ close all;
 
 %% file and plot properties
 file_date = 'Feb2026';
-fpath = '/fast4/o2/GODIP-DO/';
-fpath_EN4 = '/med2/';
+% fpath = '/fast4/o2/GODIP-DO/';
+% fpath_EN4 = '/med2/';
+fpath = '/raid/sharp/matlab/GODIP-DO/';
+fpath_EN4 = '/raid/sharp/matlab/GODIP-DO/';
 compilation.name = ['GODIP-DO_NCEI_JDS_' file_date '.nc'];
 % products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gt_ml' 'jingwei' 'han_zhou'};
 products = ncread([fpath 'O2_Maps/' compilation.name],'products');
