@@ -1,4 +1,4 @@
-%% Run all scripts to make GOBAI-O2 with WOD profile data for DOMIP-1
+%% Run all scripts to make GOBAI-O2 with WOD profile data for GODIP-DO
 t_whole_script=tic; % time entire script
 
 %% Set configuration parameters
@@ -37,11 +37,11 @@ test_ratio = 0.1;
 % numbins = 50;
 % data and parameter configuration
 data_per = 1; % set data reduction
-data_per_osse = 0.01; % set data reduction for osse
+data_per_osse = 0.1; % set data reduction for osse
 param = 'o2';
 param_props = param_config(param);
 % base grid
-base_grid = 'IAP';
+base_grid = 'EN4';
 fpaths = path_config(base_grid,param);
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -54,23 +54,23 @@ wod_vrs = 'WOD25';
 
 %% Import data
 process_WOD_profile_data(start_year,end_year,wod_vrs);
-% % plot data histogram by year
+% plot data histogram by year
 plot_data_hist(start_year,end_year,wod_vrs);
 plot_data_map(start_year,end_year,wod_vrs);
 
 %% create time-varying clusters and assign data points to them
 % % form clusters
-% gmm_clustering(param_props,fpaths,base_grid,start_year,...
+% gmm_clustering(param_props,fpaths,start_year,...
 %     end_year,snap_date,float_file_ext,clust_vars,num_clusters,...
 %     numWorkers_predict,wod_vrs);
 % % plot cluster animations
 % % plot_cluster_animation(param_props,fpaths,base_grid,num_clusters,...
 % %     start_year,snap_date,numWorkers_train);
 % % cluster data
-% assign_data_to_clusters(param_props,base_grid,snap_date,...
+% assign_data_to_clusters(param_props,snap_date,...
 %     float_file_ext,clust_vars,num_clusters,start_year,end_year,wod_vrs);
 % % plot clustered data points
-% plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,...
+% plot_data_by_cluster(param_props,file_date,float_file_ext,...
 %     num_clusters,numWorkers_predict,start_year,end_year,wod_vrs);
 % % develop k-fold evaluation indices
 % kfold_split_data(param_props,file_date,float_file_ext,...

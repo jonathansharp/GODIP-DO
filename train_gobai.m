@@ -81,10 +81,20 @@ elseif strcmp(alg_type,'GBM')
 end
 
 %% load combined data
-load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+try % try loading matlab file (normal)
+    load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+catch % if error, load NetCDF
+    fname = ['O2/Data/' vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.nc'];
+    nc_inf = ncinfo(fname);
+    for v = 1:length(nc_inf.Variables)
+        all_data.(nc_inf.Variables(v).Name) = ...
+            ncread(fname,nc_inf.Variables(v).Name);
+    end
+end
 
 %% load data clusters
-load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
+load([param_props.dir_name '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices (for k-fold testing)
@@ -107,7 +117,7 @@ if glodap_only
 end
 
 %% create directory and file names
-alg_dir = [param_props.dir_name '/Models/' dir_base];
+alg_dir = [param_props.dir_name '/Models/' vrs '/' dir_base];
 alg_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
@@ -149,7 +159,7 @@ clusters = repmat(1:num_clusters,1,num_folds)';
 
 
 % fit models
-tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+%tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 for cnt = 1:num_folds*num_clusters
     train_models(param_props,num_folds,...
         alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
@@ -334,7 +344,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     if strcmp(alg_type,'FFNN')
         % define model parameters and train FFNN
         nodes1 = [10 20 30]; nodes2 = [30 20 10];
-        alg = fit_FFNN('Oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+        alg = fit_FFNN('o2',all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
             thresh,par_use);
     elseif strcmp(alg_type,'RFR')

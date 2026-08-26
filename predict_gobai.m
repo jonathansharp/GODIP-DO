@@ -78,7 +78,7 @@ elseif strcmp(alg_type,'GBM')
 end
 
 %% create directory and file names
-alg_dir = [param_props.dir_name '/Models/' dir_base];
+alg_dir = [param_props.dir_name '/Models/' base_grid '/' dir_base]; % vrs should be 'WOD' or the name of a CMIP mode
 alg_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     alg_fnames(c) = ...
@@ -112,23 +112,30 @@ if strcmp(base_grid,'EN4')
     TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
 elseif strcmp(base_grid,'IAP')
     TS = load_IAP_dim(fpaths.temp_path,start_year,end_year);
+else
+    TS = load_model_dim([fpaths.model_path base_grid '/' param_props.file_name ...
+        '_1x1bin_' vrs '_' rlz '.nc']);
 end
+
 % create file
 create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
 
 %% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% start timing predictions
 tStart = tic;
 
 %% compute and save estimates for each month
-parfor m = 1:length(TS.months)
+for m = 1:length(TS.months)
     % load dimensions
     if strcmp(base_grid,'EN4')
         TS = load_EN4_dim(fpaths.temp_path,start_year,end_year);
     elseif strcmp(base_grid,'IAP')
         TS = load_IAP_dim(fpaths.temp_path,start_year,end_year);
+    else
+        TS = load_model_dim([fpaths.model_path base_grid '/' param_props.file_name ...
+            '_1x1bin_' vrs '_' rlz '.nc']);
     end
     % index to above 2000m
     idx_depth = find(TS.Depth < 2000);
@@ -167,6 +174,15 @@ parfor m = 1:length(TS.months)
             'salinity',[1 1 1],[idx_depth(end) Inf Inf]);
         TS.Salinity_abs(TS.Salinity_abs==999) = NaN;
         TS.Salinity_abs = permute(TS.Salinity_abs,[2 3 1]);
+    else
+        TS.thetao = ncread([fpaths.model_path base_grid ...
+            '/thetao_1x1bin_' vrs '_' rlz '.nc'],'thetao',...
+            [1 1 1 m],[Inf Inf idx_depth(end) 1]);
+        TS.so = ncread([fpaths.model_path base_grid ...
+            '/so_1x1bin_' vrs '_' rlz '.nc'],'so',...
+            [1 1 1 m],[Inf Inf idx_depth(end) 1]);
+        TS.sal_abs = gsw_SA_from_SP(TS.so,TS.pressure,TS.lon,TS.lat);
+        TS.Temperature = gsw_t_from_pt0(TS.sal_abs,TS.thetao,TS.pressure);
     end
 
     % covert RG T and S to conservative Temperature and absolute Salinity
@@ -261,7 +277,14 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         TS.Temperature_cns_array = gsw_CT_from_pt(TS.Salinity_abs_array,TS.Temperature_array);
         TS.sigma_array = gsw_sigma0(TS.Salinity_abs_array,TS.Temperature_cns_array);
     elseif strcmp(base_grid,'IAP')
-        TS.Salinity_array = TS.Salinity_abs_array; %% just replace salinity with absolute salinity because there was some error I couldn;t figure out in gsw_SP_from_SA
+        % previously had replaced salinity with absolute salinity because
+        % there was some error I couldn;t figure out in gsw_SP_from_SA
+        % changed 5/15/2026
+        TS.Salinity_array = gsw_SP_from_SA(TS.Salinity_abs_array,TS.pressure_array,TS.lon_array,TS.lat_array);
+        TS.Temperature_cns_array = gsw_CT_from_pt(TS.Salinity_abs_array,TS.Temperature_array);
+        TS.sigma_array = gsw_sigma0(TS.Salinity_abs_array,TS.Temperature_cns_array);
+    else
+        TS.Salinity_abs_array = gsw_SA_from_SP(TS.so_array,TS.pressure_array,TS.lon_array,TS.lat_array);
         TS.Temperature_cns_array = gsw_CT_from_pt(TS.Salinity_abs_array,TS.Temperature_array);
         TS.sigma_array = gsw_sigma0(TS.Salinity_abs_array,TS.Temperature_cns_array);
     end
@@ -271,19 +294,16 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     probs_matrix = single(nan(length(TS.Temperature_array),num_clusters));
 
     % apply GMM model for RFROM basegrid
-    if strcmp(base_grid,'RFROM')
-        % load GMM model
-        load([param_props.dir_name '/Data/GMM_' vrs '_' ...
-            num2str(num_clusters) '/model_' date_str],'gmm','C','S');
-        % transform to normalized arrays
-        predictor_matrix = [];
-        for v = 1:length(clust_vars)
-            predictor_matrix = [predictor_matrix TS.([clust_vars{v} '_array'])];
-        end
-        X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
-        % assign to clusters and obtain probabilities
-        [~,~,p] = cluster(gmm,X_norm);
+    load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
+        num2str(num_clusters) '/model_' date_str],'gmm','C','S');
+    % transform to normalized arrays
+    predictor_matrix = [];
+    for v = 1:length(clust_vars)
+        predictor_matrix = [predictor_matrix TS.([clust_vars{v} '_array'])];
     end
+    X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
+    % assign to clusters and obtain probabilities
+    [~,~,p] = cluster(gmm,X_norm);
     clear predictor_matrix gmm X_norm
 
     % apply models for each cluster
@@ -294,7 +314,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
 
         % load GMM cluster probabilities for this cluster and month, and convert to array
         % load GMM model
-        load([param_props.dir_name '/Data/GMM_' vrs '_' ...
+        load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
             num2str(num_clusters) '/model_' date_str],'gmm','C','S');
         % transform predictors to normalized arrays
         predictor_matrix = [];

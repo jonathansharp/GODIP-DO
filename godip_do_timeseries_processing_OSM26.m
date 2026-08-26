@@ -3,13 +3,13 @@
 %% file properties
 file_date = 'Feb2026';
 fpath = '/fast4/o2/GODIP-DO/O2_Maps/';
-fname = ['GODIP-DO_NCEI_JDS_' file_date '.nc'];
-fname_seas = ['GODIP-DO_NCEI_SEASONAL_JDS_' file_date '.nc'];
+fname = ['GODIP-DO_NCEI_old_' file_date '.nc'];
+fname_seas = ['GODIP-DO_NCEI_SEASONAL_OSM26_' file_date '.nc'];
 products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gt_ml' 'jingwei' 'han_zhou'};
 labels = {'NCEI' 'IAP' 'GT-OI' 'RB' 'SJTU-GR' 'GOBAI' 'GT-ML' 'Jingwei' 'HZ'};
 
 %% import ncei dimensions
-datasets.ncei.name = 'w25_o_19652025_yearly_anomaly_NCEI.nc';
+datasets.ncei.name = 'o_19652022_5yr_objetively_analyzed_NCEIdata_NCEImapping.nc';
 datasets.ncei.lat = ncread([fpath datasets.ncei.name],'lat');
 datasets.ncei.lon = ncread([fpath datasets.ncei.name],'lon');
 datasets.ncei.time = double(ncread([fpath datasets.ncei.name],'time'));
@@ -18,7 +18,7 @@ datasets.ncei.date = datevec(datenum(1900,1,1)+datasets.ncei.time);
 datasets.ncei.param_name = 'o_anom_an';
 
 %% import iap dimensions
-datasets.iap.name = 'IAPmapping_applied_to_IAPdata_IAPmapping_34_1960to2025_4D.nc';
+datasets.iap.name = 'IAPmapping_applied_to_NCEIdata_5yr_mean_1967to2020_4D.nc';
 datasets.iap.lat = ncread([fpath datasets.iap.name],'lat');
 datasets.iap.lon = ncread([fpath datasets.iap.name],'lon');
 datasets.iap.time = double(ncread([fpath datasets.iap.name],'time'));
@@ -27,7 +27,7 @@ datasets.iap.date = datevec(datetime(datasets.iap.time,7,1));
 datasets.iap.param_name = 'oxygen';
 
 %% import gt-oi dimensions
-datasets.gt_oi.name = 'o2anom_g1x1z67_NCEI_Ito22_1965-2025.nc';
+datasets.gt_oi.name = 'Ito22mapping_NCEIdata_5yrmean_67C0.nc';
 datasets.gt_oi.lat = ncread([fpath datasets.gt_oi.name],'lat');
 datasets.gt_oi.lon = ncread([fpath datasets.gt_oi.name],'lon');
 datasets.gt_oi.time = double(ncread([fpath datasets.gt_oi.name],'time'));
@@ -36,7 +36,7 @@ datasets.gt_oi.date = datevec(datenum(1965,7,1)+datasets.gt_oi.time);
 datasets.gt_oi.param_name = 'o2';
 
 %% import rb dimensions
-datasets.rb.name = 'o_annual_mean_depth_NCEI_Roach_Bindoff_1965_2025.nc';
+datasets.rb.name = 'o_annual_mean_depth_NCEI_Roach_Bindoff_1965_2022_v2.nc';
 datasets.rb.lat = ncread([fpath datasets.rb.name],'lat');
 datasets.rb.lon = ncread([fpath datasets.rb.name],'lon');
 datasets.rb.time = double(ncread([fpath datasets.rb.name],'year'));
@@ -55,7 +55,7 @@ datasets.sjtu_gr.files = dir([fpath '5yrmeanSJTU']);
 datasets.sjtu_gr.param_name = 'o2anom_estimate';
 
 %% import gobai dimensions
-datasets.gobai.name = 'gobai-o2-godip-do-v1.2-with-float-correction.nc';
+datasets.gobai.name = 'gobai-o2-godip-do-v1.1-with-float-correction.nc';
 datasets.gobai.lat = ncread([fpath datasets.gobai.name],'lat');
 datasets.gobai.lon = ncread([fpath datasets.gobai.name],'lon');
 datasets.gobai.time = ncread([fpath datasets.gobai.name],'time');
@@ -73,26 +73,26 @@ datasets.gobai.param_name = 'o2';
 % datasets.gobai_iap.param_name = 'o2';
 
 %% import gt-ml dimensions (OLD)
-% datasets.gt_ml.name1 = 'GT_ML_NN_updated_01042026.nc';
-% datasets.gt_ml.name2 = 'GT_ML_RF_updated_01042026.nc';
-% datasets.gt_ml.lat = ncread([fpath datasets.gt_ml.name1],'lat');
-% datasets.gt_ml.lon = ncread([fpath datasets.gt_ml.name1],'lon');
-% datasets.gt_ml.time = double(ncread([fpath datasets.gt_ml.name1],'time'));
-% datasets.gt_ml.depth = ncread([fpath datasets.gt_ml.name1],'depth');
-% datasets.gt_ml.date = datevec(datenum(1965,0,15)+datasets.gt_ml.time);
-% datasets.gt_ml.param_name = 'o2';
-
-%% import gt-ml dimensions
-datasets.gt_ml.name = 'o2_g1x1z102_yearly_NCEI_EN4C14_I24_1965-2025.nc';
+datasets.gt_ml.name = 'GT_ML_RF_ShipArgo_corrected.nc';
+% datasets.gt_ml.name2 = 'GT_ML_NN_ShipArgo_corrected.nc';
 datasets.gt_ml.lat = ncread([fpath datasets.gt_ml.name],'lat');
 datasets.gt_ml.lon = ncread([fpath datasets.gt_ml.name],'lon');
-datasets.gt_ml.year = double(ncread([fpath datasets.gt_ml.name],'year'));
+datasets.gt_ml.time = double(ncread([fpath datasets.gt_ml.name],'time'));
 datasets.gt_ml.depth = ncread([fpath datasets.gt_ml.name],'depth');
-datasets.gt_ml.date = datevec(datetime(datasets.gt_ml.year,7,1));
+datasets.gt_ml.date = datevec(datenum(1965,0,15)+datasets.gt_ml.time);
 datasets.gt_ml.param_name = 'o2';
 
+%% import gt-ml dimensions
+% datasets.gt_ml.name = 'GT_ML_RF_ShipArgo_corrected.nc';
+% datasets.gt_ml.lat = ncread([fpath datasets.gt_ml.name],'lat');
+% datasets.gt_ml.lon = ncread([fpath datasets.gt_ml.name],'lon');
+% datasets.gt_ml.year = double(ncread([fpath datasets.gt_ml.name],'year'));
+% datasets.gt_ml.depth = ncread([fpath datasets.gt_ml.name],'depth');
+% datasets.gt_ml.date = datevec(datetime(datasets.gt_ml.year,7,1));
+% datasets.gt_ml.param_name = 'o2';
+
 %% import jingwei dimensions
-datasets.jingwei.name = 'o2map_v1.2_WOD25_ShipArgo_with_correction_5500m_sjtu_jingwei.nc';
+datasets.jingwei.name = 'o2map_v1.2_5500m_sjtu_jingwei.nc';
 datasets.jingwei.lat = ncread([fpath datasets.jingwei.name],'lat');
 datasets.jingwei.lon = ncread([fpath datasets.jingwei.name],'lon');
 datasets.jingwei.time = double(ncread([fpath datasets.jingwei.name],'time'));
@@ -101,7 +101,7 @@ datasets.jingwei.date = datevec(datenum(1965,0,15)+datasets.jingwei.time);
 datasets.jingwei.param_name = 'o2';
 
 %% import han and zhou dimensions
-datasets.han_zhou.name = 'DO_DOMIP_SJTU_Han_Zhou_correctedArgo_19652025.nc';
+datasets.han_zhou.name = 'DO_DOMIP_SJTU_Han_Zhou.nc';
 datasets.han_zhou.lat = double(ncread([fpath datasets.han_zhou.name],'Latitude'));
 datasets.han_zhou.lon = double(ncread([fpath datasets.han_zhou.name],'Longitude'));
 datasets.han_zhou.time = double(ncread([fpath datasets.han_zhou.name],'Time'));
