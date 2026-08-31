@@ -1,26 +1,23 @@
-function all_data = process_WOD_profile_data(y1,y2,vrs)
+function all_data = process_IAP_profile_data(y1,y2,vrs)
 
 % load WOD profile data
-if strcmp(vrs,'WOD23')
-    nc_label = 'NCEI';
-    folder = 'WOD_Profiles_Data';
-elseif strcmp(vrs,'WOD25')
-    nc_label = 'WOD25';
-    folder = 'WOD25_Profiles_Data';
-end
+nc_label = 'IAP';
+folder = 'IAP_Profiles_Data';
 types = {'OSD' 'CTD' 'PFL'};
 
 % for oxygen
-vars_o2 = {'cruise' 'profile' 'time' 'year' 'month' 'day' 'lat' 'lon' 'depth' 'Oxygen'};
-vars_other = {'Temperature' 'Salinity'};
+vars_o2 = {'obsdepth' 'DOprofile_obsdepth' 'DOprofile_anomaly_stddepth' 'DOprofile_stddepth' 'DOprofile_info_record'...
+    'DOprofile_info_string' 'DOprofile_info_record_name' 'DOprofile_info_string_name' 'stddepth' 'DOprofile_num' ...
+    'cruise' 'profile' 'time' 'year' 'month' 'day' 'lat' 'lon' 'depth' 'Oxygen'};
+    vars_other = {'CODC_depth_temperature'  'CODC_temperature' 'Salinity'};
 vars_both = [vars_o2 vars_other];
 % pre-allocate
 for v = 1:length(vars_both); all_data.(vars_both{v}) = []; end
 all_data.type = []; all_data.mode = []; idx_mode = [];
 % load oxygen variables
 for y = y1:y2
-    for x = 1:length(types)
-        file = [folder '/Oxygen_' types{x} '_' nc_label '/Oxygen_' types{x} '_' num2str(y) '.nc'];
+    for m = 1:12
+        file = [folder '/CAS_DO_profiles_' num2str(y) '_' num2str(m) '.nc'];
         if exist(file,'file')
             schema = ncinfo(file);
             pdim = schema.Dimensions(1).Length;
@@ -75,7 +72,7 @@ for y = y1:y2
             % type: CTD=1 OSD=2 PFL=3
             all_data.type = [all_data.type;repmat(x,sum(idx(:)),1)];
             try
-            all_data.mode = [all_data.mode;all_data_temp.mode(idx)];
+                all_data.mode = [all_data.mode;all_data_temp.mode(idx)];
             catch
                 keyboard
             end
@@ -115,28 +112,28 @@ all_data.day_sin = sin((2.*pi.*all_data.day_of_year)/365.25);
 all_data.day_cos = cos((2.*pi.*all_data.day_of_year)/365.25);
 
 % calculate float oxygen saturation
-Ts = log((298.15 - all_data.Temperature)./(273.15 + all_data.Temperature)); 
+Ts = log((298.15 - all_data.Temperature)./(273.15 + all_data.Temperature));
 % The coefficents below are from the second column of Table 1 of Garcia and
 % Gordon (1992)
 a0 =  5.80871; a1 =  3.20291; a2 =  4.17887; a3 =  5.10006;
 a4 = -9.86643e-2; a5 =  3.80369; b0 = -7.01577e-3; b1 = -7.70028e-3;
 b2 = -1.13864e-2; b3 = -9.51519e-3; c0 = -2.75915e-7;
 all_data.Oxygen_sat = exp(a0 + Ts.*(a1 + Ts.*(a2 + Ts.*(a3 + Ts.*(a4 + a5*Ts)))) + ...
-      all_data.Salinity.*(b0 + Ts.*(b1 + Ts.*(b2 + b3*Ts)) + c0*all_data.Salinity));
+    all_data.Salinity.*(b0 + Ts.*(b1 + Ts.*(b2 + b3*Ts)) + c0*all_data.Salinity));
 all_data.Oxygen_sat_per = 100.*(all_data.Oxygen./all_data.Oxygen_sat);
 all_data.Oxygen_uncorrected = all_data.Oxygen;
 
 % index to float data
 idx_float = all_data.type == 3;
+idx_deep = all_data.pressure >= max_delta_pressure;
+idx_shal = all_data.pressure < max_delta_pressure;
 
 % adjust float data according to GOBAI-O2 deep and shallow float correction (June 2026)
 load('../GOBAI/O2/Data/float_corr_Jun-2026_D_A');
-idx_deep = all_data.pressure >= max_delta_pressure;
-idx_shal = all_data.pressure < max_delta_pressure;
 corr_fac = nan(size(all_data.Oxygen_sat));
 corr_fac(idx_float & idx_deep) = all_data.pressure(idx_float & idx_deep).*slp_deep + int_deep;
 corr_fac(idx_float & idx_shal) = all_data.pressure(idx_float & idx_shal).*slp_shal + int_shal;
-all_data.Oxygen(idx_float) = all_data.Oxygen(idx_float) - corr_fac(idx_float);
+all_data.Oxygen(idx_float) = all_data.Oxygen(idx_float) - corr_fac;
 
 % remove float data for test with ship data only
 % vars = fieldnames(all_data);
@@ -146,4 +143,3 @@ all_data.Oxygen(idx_float) = all_data.Oxygen(idx_float) - corr_fac(idx_float);
 
 % save data
 save(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data','-v7.3');
-

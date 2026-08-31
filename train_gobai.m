@@ -165,7 +165,7 @@ for cnt = 1:num_folds*num_clusters
         alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
         train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
         numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
-        folds(cnt),clusters(cnt));
+        folds(cnt),clusters(cnt),vrs);
 end
 
 % end parallel session
@@ -306,7 +306,7 @@ end
 function train_models(param_props,num_folds,...
     alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
     train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c)
+    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c,vrs)
 
 %% define index for observations
 if num_folds > 1
@@ -343,10 +343,14 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     %% fit model for each cluster
     if strcmp(alg_type,'FFNN')
         % define model parameters and train FFNN
-        nodes1 = [10 20 30]; nodes2 = [30 20 10];
-        alg = fit_FFNN('o2',all_data,all_data_clusters.(['c' num2str(c)]),...
-            obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
-            thresh,par_use);
+        nodes1 = [10 15 20]; nodes2 = [20 15 10];
+        if strcmp(vrs,'WOD25')
+            alg = fit_FFNN('Oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+                obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
+                thresh,par_use);
+        else
+            error('Define new variable for FFNN training.');
+        end
     elseif strcmp(alg_type,'RFR')
         % define model parameters and train RFR
         NumPredictors = ceil(sqrt(length(variables)));
