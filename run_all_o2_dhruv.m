@@ -5,8 +5,8 @@ t_whole_script=tic; % time entire script
 start_year = 1965;
 end_year = 2025;
 % system-specific worker configuration
-numWorkers_train = 24;
-numWorkers_predict = 24;
+numWorkers_train = 60;
+numWorkers_predict = 60;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202601;
@@ -36,8 +36,8 @@ test_ratio = 0.1;
 % numstumps = 500;
 % numbins = 50;
 % data and parameter configuration
-data_per = 0.01; % set data reduction
-data_per_osse = 0.01; % set data reduction for osse
+data_per = 0.5; % set data reduction
+% data_per_osse = 0.01; % set data reduction for osse
 param = 'o2';
 param_props = param_config(param);
 % base grid
@@ -70,33 +70,33 @@ warning('off','MATLAB:hg:AutoSoftwareOpenGL');
 % IPSL-CM6A-LR
 
 %% loop through each model
-for m = 5%1:length(model_names)
+for m = 3 %1:length(model_names)
 
-%% form clusters
-gmm_clustering(param_props,fpaths,start_year,end_year,...
-    snap_date,float_file_ext,clust_vars,num_clusters,numWorkers_predict,...
-    model_names{m});
+% %% form clusters
+% gmm_clustering(param_props,fpaths,start_year,end_year,...
+%     snap_date,float_file_ext,clust_vars,num_clusters,numWorkers_predict,...
+%     model_names{m});
 
-%% cluster data
-assign_data_to_clusters(param_props,snap_date,float_file_ext,clust_vars,...
-    num_clusters,start_year,end_year,model_names{m});
-plot_data_by_cluster(param_props,file_date,float_file_ext,num_clusters,...
-    numWorkers_train,start_year,end_year,model_names{m});
-% plot_data_over_clusters(param,model_types{m},file_date,float_file_ext,num_clusters,numWorkers_train);
+% %% cluster data
+% assign_data_to_clusters(param_props,snap_date,float_file_ext,clust_vars,...
+%     num_clusters,start_year,end_year,model_names{m});
+% plot_data_by_cluster(param_props,file_date,float_file_ext,num_clusters,...
+%     numWorkers_train,start_year,end_year,model_names{m});
+% % plot_data_over_clusters(param,model_types{m},file_date,float_file_ext,num_clusters,numWorkers_train);
 
-%% train algorithms
-% train feed forward neural networks
-train_gobai('FFNN',param_props,file_date,float_file_ext,...
-    num_clusters,variables,thresh,numWorkers_train,snap_date,...
-    start_year,end_year,model_names{m},'reduce_data',data_per_osse,'train_ratio',...
-    train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
+% %% train algorithms
+% % train feed forward neural networks
+% train_gobai('FFNN',param_props,file_date,float_file_ext,...
+%     num_clusters,variables,thresh,numWorkers_train,snap_date,...
+%     start_year,end_year,model_names{m},'reduce_data',data_per,'train_ratio',...
+%     train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
 
 %% predict on grid
 % predict on grid using feed forward neural networks
 predict_gobai('FFNN',param_props,fpaths,...
-    model_names{m},file_date,float_file_ext,num_clusters,...
+    model_file_names{m},file_date,float_file_ext,num_clusters,...
     variables,thresh,numWorkers_predict,clust_vars,start_year,end_year,...
-    snap_date,model_file_names{m},'train_ratio',train_ratio,'val_ratio',val_ratio,...
+    snap_date,model_names{m},'train_ratio',train_ratio,'val_ratio',val_ratio,...
     'test_ratio',test_ratio,'rlz',model_realizations{m});
 
 %% print finished model

@@ -348,8 +348,18 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
             alg = fit_FFNN('Oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
                 obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
                 thresh,par_use);
+        elseif strcmp(vrs,'IAP')
+            alg = fit_FFNN('Oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+                obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
+                thresh,par_use);
         else
-            error('Define new variable for FFNN training.');
+            try
+                alg = fit_FFNN('o2',all_data,all_data_clusters.(['c' num2str(c)]),...
+                    obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
+                    thresh,par_use);
+            catch
+                error('Define new variable for FFNN training.');
+            end
         end
     elseif strcmp(alg_type,'RFR')
         % define model parameters and train RFR

@@ -41,7 +41,7 @@ data_per_osse = 0.1; % set data reduction for osse
 param = 'o2';
 param_props = param_config(param);
 % base grid
-base_grid = 'EN4';
+base_grid = 'IAP'; % EN4 or IAP
 fpaths = path_config(base_grid,param);
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -50,10 +50,11 @@ realizations = {'r1i1p1f1' 'r1i1p1f1' 'r1i1p1f1' 'r1i1p1f1' 'r1i1p1f1'};
 grid_labels = {'gr' 'gn' 'gn' 'gn' 'gn'};
 grid_types = {'regridded' 'native_grid' 'native_grid' 'native_grid' 'native_grid'};
 % version of the WOD to use
-vrs = 'WOD25';
+vrs = 'WOD25'; % WOD25 or IAP
 
 %% Import data
-process_WOD_profile_data(start_year,end_year,vrs);
+% process_WOD_profile_data(start_year,end_year,vrs);
+process_IAP_profile_data(start_year,end_year,vrs);
 % plot data histogram by year
 plot_data_hist(start_year,end_year,vrs);
 plot_data_map(start_year,end_year,vrs);
@@ -101,12 +102,12 @@ predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
 %     file_date,float_file_ext,numWorkers_predict,'train_ratio',train_ratio,...
 %     'val_ratio',val_ratio,'test_ratio',test_ratio);
 
-%% extract data from models
-run_osse(fpaths,model_types,model_folders,realizations,...
-    grid_labels,grid_types,param_props,file_date,snap_date,...
-    float_file_ext,start_year,end_year,num_clusters,variables,...
-    clust_vars,train_ratio,val_ratio,test_ratio,thresh,...
-    data_per_osse,numWorkers_train,numWorkers_predict,1,1,1);
+% %% extract data from models
+% run_osse(fpaths,model_types,model_folders,realizations,...
+%     grid_labels,grid_types,param_props,file_date,snap_date,...
+%     float_file_ext,start_year,end_year,num_clusters,variables,...
+%     clust_vars,train_ratio,val_ratio,test_ratio,thresh,...
+%     data_per_osse,numWorkers_train,numWorkers_predict,1,1,1);
 
 %% finish timing
 toc(t_whole_script)

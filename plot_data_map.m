@@ -5,7 +5,7 @@ function plot_data_map(y1,y2,vrs)
 load(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data');
 
 % establish figure
-figure('visible','on'); 
+figure('visible','off'); 
 worldmap([-90 90],[20 380]); hold on;
 setm(gca,'MapProjection','robinson');
 set(gcf,'Position',[100 100 1200 800]);
@@ -27,5 +27,6 @@ mlabel off; plabel off;
 legend([ax_pfl,ax_ctd,ax_osd],{'PFL' 'CTD' 'OSD'},'Location','northwest','FontSize',20,'NumColumns',3);
 
 % save figure
-export_fig(['O2/Figures/dataset_map_' num2str(y1) '_' ...
+export_fig(['O2/Figures/' vrs '_dataset_map_' num2str(y1) '_' ...
     num2str(y2) '.png'],'-transparent','-silent');
+close;

@@ -52,8 +52,8 @@ for y = y1:y2
             idx_sal = ismember(all_data_temp.sal_profile,all_data_temp.profile) & ...
                 ismember(all_data_temp.sal_profile,all_data_temp.temp_profile);
             % filter to only profiles with A or D oxygen, temperature,
-            % and salinity, and above 2250m
-            idx_depth = find(all_data_temp.depth <= 2250);
+            % and salinity, and above 2250m (OPTIONAL, currently off)
+            idx_depth = true(size(all_data_temp.depth)); % find(all_data_temp.depth <= 2250);
             for v = 1:length(vars_o2)
                 if strcmp(vars_o2{v},'depth')
                     all_data_temp.(vars_o2{v}) = repmat(all_data_temp.(vars_o2{v})(idx_depth),1,sum(idx_o2));

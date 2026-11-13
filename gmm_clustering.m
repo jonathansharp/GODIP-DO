@@ -60,6 +60,7 @@ save([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' 
     'gmm','num_clusters','C','S','-v7.3');
 clear gmm C S
 toc
+
 % load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) '/model_' date_str]);
 
 % %% assign grid cells and probabilities to clusters
