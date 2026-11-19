@@ -1,8 +1,8 @@
 %% plot SoTC Figure 2
 % load data
-file_date = 'Jan2026';
+file_date = 'Nov2026';
 fpath = '/fast4/o2/GODIP-DO/';
-load([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_STATS_' file_date '.mat']);
+load([fpath 'O2_Maps/' 'GODIP-DO_SotC-2025_STATS_' file_date '.mat']);
 % create figure
 stip = false; stip_dens = 200; sig_prods = 9;
 plt_alpha = 0.6; plt_bkgr = 'w';

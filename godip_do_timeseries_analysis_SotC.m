@@ -2,12 +2,13 @@
 close all;
 
 %% file and plot properties
-file_date = 'May2026';
+file_date = 'Nov2026';
 fpath = '/fast4/o2/GODIP-DO/';
 fpath_EN4 = '/med2/';
 compilation.name = ['GODIP-DO_SotC-2025_' file_date '.nc'];
-if ~isfolder('Figures/file_date'); mkdir('Figures/file_date'); end
-if ~isfolder('Figures/file_date/vectors'); mkdir('Figures/file_date/vectors'); end
+compilation.dens_name = ['GODIP-DO_SotC-2025_' file_date '_density.nc'];
+if ~isfolder(['Figures/' file_date]); mkdir(['Figures/' file_date]); end
+if ~isfolder(['Figures/' file_date '/vectors']); mkdir(['Figures/' file_date '/vectors']); end
 % products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gt_ml' 'jingwei' 'han_zhou'};
 products = ncread([fpath 'O2_Maps/' compilation.name],'products');
 labels = {'NCEI' 'IAP' 'GT-OI' 'UTAS' 'SJTU-GR' 'GOBAI' 'GOBAI-IAP' ...
@@ -115,9 +116,15 @@ for p = 1:length(products)
     % end
     % zero trap
     o2(o2<0) = 0;
-    % convert to mol/m3 (approximate seawater density)
+    % calculate mean o2 over time
     o2_mean(:,:,:,p) = mean(o2,4,'omitnan'); % mean for each grid cell
-    o2_m3 = o2.*1026.*(1e-6); % umol/kg * kg/m3 * mol/umol = mol/m3
+    % convert to mol/m3 (approximate seawater density)
+    % o2_m3 = o2.*1026.*(1e-6); % umol/kg * kg/m3 * mol/umol = mol/m3
+    % convert to mol/m3 (absolute seawater density from EN4)
+    dens = ncread([fpath 'O2_Maps/' compilation.dens_name],'density_en4',...
+        [1 1 d1_idx 1],[Inf Inf d2_idx-d1_idx+1 Inf]);
+    dens(dens > 9e36) = NaN;
+    o2_m3 = o2.*dens.*(1e-6); % umol/kg * kg/m3 * mol/umol = mol/m3
     % remove values outside common mask
     o2(~repmat(mask,1,1,1,length(time))) = NaN;
     o2_m3(~repmat(mask,1,1,1,length(time))) = NaN;
@@ -209,7 +216,7 @@ for p = 1:length(products)
         end
     end
     % % plot trends
-    % figure('Position',[100 100 1200 600]);
+    % figure('Position',[100 100 1200 600],'Visible','off');
     % worldmap(lat_lims,lon_lims);
     % pcolorm(lat,lon,o2_inv_trend(:,:,p)');
     % c = colorbar;
@@ -491,30 +498,30 @@ end
 %% plot mean on depth levels
 for d = 1:length(depth_indices)
     % plot each product individually
-    % for p = 1:length(products)
-    %     figure('Position',[100 100 1200 600]);
-    %     worldmap(lat_lims,lon_lims);
-    %     title([labels{p} ' Oxygen at ' num2str(depth(depth_indices(d))) ...
-    %         ' meters (\mumol kg^{-1})'],'FontSize',20);
-    %     pcolorm(lat,[lon;lon(end)+1],...
-    %         [o2_mean(1,:,depth_indices(d),p);o2_mean(:,:,depth_indices(d),p)]');
-    %     contourm(lat,[lon;lon(end)+1],...
-    %         [o2_mean(1,:,depth_indices(d),p);o2_mean(:,:,depth_indices(d),p)]',...
-    %         o2_levels,'k','LineWidth',1,'ShowText','off');
-    %     c = colorbar; clim(o2_lims); c.FontSize = 16; c.TickLength = 0;
-    %     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
-    %     plot_land('map',[1 1 1]);
-    %     mlabel off; plabel off; gridm off;
-    %     figname = ['Figures/file_date/mean_o2_' labels{p} '_' ...
-    %         num2str(depth(depth_indices(d)))];
-    %     export_fig([figname '.png'],'-transparent');
-    %     figname = ['Figures/file_date/vectors/mean_o2_' labels{p} '_' ...
-    %         num2str(depth(depth_indices(d)))];
-    %     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
-    %     close;
-    % end
+    for p = 1:length(products)
+        figure('Position',[100 100 1200 600],'Visible','off');
+        worldmap(lat_lims,lon_lims);
+        title([labels{p} ' Oxygen at ' num2str(depth(depth_indices(d))) ...
+            ' meters (\mumol kg^{-1})'],'FontSize',20);
+        pcolorm(lat,[lon;lon(end)+1],...
+            [o2_mean(1,:,depth_indices(d),p);o2_mean(:,:,depth_indices(d),p)]');
+        contourm(lat,[lon;lon(end)+1],...
+            [o2_mean(1,:,depth_indices(d),p);o2_mean(:,:,depth_indices(d),p)]',...
+            o2_levels,'k','LineWidth',1,'ShowText','off');
+        c = colorbar; clim(o2_lims); c.FontSize = 16; c.TickLength = 0;
+        colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
+        plot_land('map',[1 1 1]);
+        mlabel off; plabel off; gridm off;
+        figname = ['Figures/' file_date '/mean_o2_' labels{p} '_' ...
+            num2str(depth(depth_indices(d)))];
+        export_fig([figname '.png'],'-transparent');
+        figname = ['Figures/' file_date '/vectors/mean_o2_' labels{p} '_' ...
+            num2str(depth(depth_indices(d)))];
+        exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+        close;
+    end
     % plot ensemble mean
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     title(['Oxygen at ' num2str(depth(depth_indices(d))) ...
         ' meters (\mumol kg^{-1})'],'FontSize',20);
@@ -527,10 +534,10 @@ for d = 1:length(depth_indices)
     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/ensemble_mean_o2_' ...
+    figname = ['Figures/' file_date '/ensemble_mean_o2_' ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/file_date/vectors/ensemble_mean_o2_' ...
+    figname = ['Figures/' file_date '/vectors/ensemble_mean_o2_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
@@ -538,27 +545,27 @@ end
 
 %% plot mean inventory
 for l = 1:length(layers)
-    % % plot each product individually
-    % for p = 1:length(products)
-    %     figure('Position',[100 100 1200 600]);
-    %     worldmap(lat_lims,lon_lims);
-    %     title([labels{p} ' Oxygen Inventory from ' layers{l} ...
-    %         ' meters (mol m^{-2})'],'FontSize',20);
-    %     pcolorm(lat,[lon;lon(end)+1],...
-    %         [o2_inv_mean(:,:,p,l);o2_inv_mean(end,:,p,l)]');
-    %     contourm(lat,[lon;lon(end)+1],...
-    %         [o2_inv_mean(:,:,p,l);o2_inv_mean(end,:,p,l)]',...
-    %         o2_inv_levels{l,:},'k','LineWidth',1,'ShowText','off');
-    %     c = colorbar; clim(o2_inv_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
-    %     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
-    %     plot_land('map',[1 1 1]);
-    %     mlabel off; plabel off; gridm off;
-    %     figname = ['Figures/file_date/mean_o2_inv_' labels{p} '_' layers{l}];
-    %     export_fig([figname '.png'],'-transparent');
-    %     close;
-    % end
+    % plot each product individually
+    for p = 1:length(products)
+        figure('Position',[100 100 1200 600],'Visible','off');
+        worldmap(lat_lims,lon_lims);
+        title([labels{p} ' Oxygen Inventory from ' layers{l} ...
+            ' meters (mol m^{-2})'],'FontSize',20);
+        pcolorm(lat,[lon;lon(end)+1],...
+            [o2_inv_mean(:,:,p,l);o2_inv_mean(end,:,p,l)]');
+        contourm(lat,[lon;lon(end)+1],...
+            [o2_inv_mean(:,:,p,l);o2_inv_mean(end,:,p,l)]',...
+            o2_inv_levels{l,:},'k','LineWidth',1,'ShowText','off');
+        c = colorbar; clim(o2_inv_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
+        colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
+        plot_land('map',[1 1 1]);
+        mlabel off; plabel off; gridm off;
+        figname = ['Figures/' file_date '/inv_o2_' labels{p} '_' layers{l}];
+        export_fig([figname '.png'],'-transparent');
+        close;
+    end
     % plot ensemble mean
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     title(['Oxygen Inventory from ' layers{l} ...
         ' meters (mol m^{-2})'],'FontSize',20);
@@ -571,7 +578,7 @@ for l = 1:length(layers)
     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/ensemble_mean_o2_inv_' layers{l}];
+    figname = ['Figures/' file_date '/ensemble_inv_o2_' layers{l}];
     export_fig([figname '.png'],'-transparent');
     close;
 end
@@ -580,7 +587,7 @@ end
 for l = 1:length(layers)
     p1 = 11; p2 = 12;
     % GOBAI-EN4 vs GOBAI-IAP
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     title([labels{p1} ' ' char(8722) ' ' labels{p2}  ' Oxygen Inventory Difference from ' layers{l} ...
         ' meters (mol m^{-2})'],'FontSize',16);
@@ -593,7 +600,7 @@ for l = 1:length(layers)
     colormap(cmocean('balance',length(inv_diff_levels{l,:})-1,'pivot',0));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/mean_o2_inv_diff_' ...
+    figname = ['Figures/' file_date '/inv_o2_diff_' ...
         labels{p1} '_' labels{p2} '_' layers{l}];
     export_fig([figname '.png'],'-transparent');
     close;
@@ -608,35 +615,35 @@ temp_anom = nan(length(lon),length(lat),length(depth_indices));
 sal_anom = nan(length(lon),length(lat),length(depth_indices));
 for d = 1:length(depth_indices)
     %% plot each product individually
-    % for p = 1:length(products)
-    %     figure('Position',[100 100 1200 600]);
-    %     worldmap(lat_lims,lon_lims);
-    %     title([labels{p} ' Oxygen Anomaly in ' num2str(year(anom_idx)) ...
-    %         ' at ' num2str(depth(depth_indices(d))) ...
-    %         ' meters (\mumol kg^{-1})'],'FontSize',20);
-    %     % calculate anomaly
-    %     o2 = squeeze(ncread([fpath 'O2_Maps/' compilation.name],products{p},...
-    %         [1 1 d1_idx 1],[Inf Inf d2_idx-d1_idx+1 Inf]));
-    %     if ~any(any(~isnan(o2(:,:,depth_indices(d),anom_idx))))
-    %         close; continue; end % check for any values in 2025
-    %     o2_anom_temp = o2(:,:,depth_indices(d),anom_idx) - mean(o2(:,:,depth_indices(d),...
-    %         baseline_idx(1):baseline_idx(end)),4,'omitnan');
-    %     o2_anom_temp(~mask(:,:,depth_indices(d))) = NaN;
-    %     o2_anom(:,:,d,p) = o2_anom_temp;
-    %     pcolorm(lat-.25,[lon;lon(end)+1]-.25,[o2_anom(:,:,d,p);o2_anom(end,:,d,p)]');
-    %     contourm(lat-.25,[lon;lon(end)+1]-.25,[o2_anom(:,:,d,p);o2_anom(end,:,d,p)]',...
-    %         anom_levels,'k','LineWidth',1,'ShowText','off');
-    %     c = colorbar; clim(anom_lims); c.FontSize = 16; c.TickLength = 0;
-    %     colormap(cmocean('balance',length(anom_levels)-1,'pivot',0));
-    %     plot_land('map',[1 1 1]);
-    %     mlabel off; plabel off; gridm off;
-    %     figname = ['Figures/file_date/o2_anom_' num2str(year(anom_idx)) '_' labels{p} '_' ...
-    %         num2str(depth(depth_indices(d)))];
-    %     export_fig([figname '.png'],'-transparent');
-    %     close;
-    % end
+    for p = 1:length(products)
+        figure('Position',[100 100 1200 600],'Visible','off');
+        worldmap(lat_lims,lon_lims);
+        title([labels{p} ' Oxygen Anomaly in ' num2str(year(anom_idx)) ...
+            ' at ' num2str(depth(depth_indices(d))) ...
+            ' meters (\mumol kg^{-1})'],'FontSize',20);
+        % calculate anomaly
+        o2 = squeeze(ncread([fpath 'O2_Maps/' compilation.name],products{p},...
+            [1 1 d1_idx 1],[Inf Inf d2_idx-d1_idx+1 Inf]));
+        if ~any(any(~isnan(o2(:,:,depth_indices(d),anom_idx))))
+            close; continue; end % check for any values in 2025
+        o2_anom_temp = o2(:,:,depth_indices(d),anom_idx) - mean(o2(:,:,depth_indices(d),...
+            baseline_idx(1):baseline_idx(end)),4,'omitnan');
+        o2_anom_temp(~mask(:,:,depth_indices(d))) = NaN;
+        o2_anom(:,:,d,p) = o2_anom_temp;
+        pcolorm(lat-.25,[lon;lon(end)+1]-.25,[o2_anom(:,:,d,p);o2_anom(end,:,d,p)]');
+        contourm(lat-.25,[lon;lon(end)+1]-.25,[o2_anom(:,:,d,p);o2_anom(end,:,d,p)]',...
+            anom_levels,'k','LineWidth',1,'ShowText','off');
+        c = colorbar; clim(anom_lims); c.FontSize = 16; c.TickLength = 0;
+        colormap(cmocean('balance',length(anom_levels)-1,'pivot',0));
+        plot_land('map',[1 1 1]);
+        mlabel off; plabel off; gridm off;
+        figname = ['Figures/' file_date '/o2_anom_' num2str(year(anom_idx)) '_' labels{p} '_' ...
+            num2str(depth(depth_indices(d)))];
+        export_fig([figname '.png'],'-transparent');
+        close;
+    end
     %% plot ensemble anomaly
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     title(['Oxygen Anomaly at ' num2str(depth(depth_indices(d))) ...
         ' meters (\mumol kg^{-1})'],'FontSize',20);
@@ -647,15 +654,15 @@ for d = 1:length(depth_indices)
     colormap(cmocean('balance',length(anom_levels)-1,'pivot',0));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/o2_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = ['Figures/' file_date '/o2_ensemble_anom_' num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/file_date/vectors/o2_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = ['Figures/' file_date '/vectors/o2_ensemble_anom_' num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
     %% plot temperature anomaly
-    figure('Position',[100 100 1200 600]);
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     title(['Temperature Anomaly at ' num2str(depth(depth_indices(d))) ...
         ' meters (deg. C)'],'FontSize',20);
@@ -672,10 +679,10 @@ for d = 1:length(depth_indices)
     colormap(cmocean('balance',length(temp_anom_levels)-1,'pivot',0));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/temp_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = ['Figures/' file_date '/temp_ensemble_anom_' num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/file_date/vectors/temp_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = ['Figures/' file_date '/vectors/temp_ensemble_anom_' num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
@@ -693,27 +700,27 @@ end
 %% plot 2025 inventory anomaly
 for l = 1:length(layers)
     %% plot each product individually
-    % for p = 1:length(products)
-    %     % plot inventory anomaly in 2025
-    %     if ~any(any(~isnan(o2_inv_anom_2025)))
-    %         continue; end % check for any values in 2025
-    %     figure('Position',[100 100 1200 600],'Visible','off');
-    %     worldmap(lat_lims,lon_lims);
-    %     title([labels{p} ' Oxygen Anomaly in ' num2str(year(anom_idx_2025)) ...
-    %         ' from ' layers{l} ' meters (mol m^{-2})'],'FontSize',20);
-    %     pcolorm(lat-.5,[lon;lon(end)+1]-.5,...
-    %         [o2_inv_anom_2025(:,:,l,p);o2_inv_anom_2025(end,:,l,p)]');
-    %     contourm(lat,[lon;lon(end)+1],...
-    %         [o2_inv_anom_2025(:,:,l,p);o2_inv_anom_2025(end,:,l,p)]',...
-    %         inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
-    %     c = colorbar; clim(inv_anom_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
-    %     colormap(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0));
-    %     plot_land('map',[1 1 1]);
-    %     mlabel off; plabel off; gridm off;
-    %     figname = ['Figures/file_date/o2_inv_anom_2025_' labels{p} '_' layers{l}];
-    %     exportgraphics(gcf,[figname '.png']);
-    %     close;
-    % end
+    for p = 1:length(products)
+        % plot inventory anomaly in 2025
+        if ~any(any(~isnan(o2_inv_anom_2025)))
+            continue; end % check for any values in 2025
+        figure('Position',[100 100 1200 600],'Visible','off');
+        worldmap(lat_lims,lon_lims);
+        title([labels{p} ' Oxygen Anomaly in ' num2str(year(anom_idx_2025)) ...
+            ' from ' layers{l} ' meters (mol m^{-2})'],'FontSize',20);
+        pcolorm(lat-.5,[lon;lon(end)+1]-.5,...
+            [o2_inv_anom_2025(:,:,l,p);o2_inv_anom_2025(end,:,l,p)]');
+        contourm(lat,[lon;lon(end)+1],...
+            [o2_inv_anom_2025(:,:,l,p);o2_inv_anom_2025(end,:,l,p)]',...
+            inv_anom_levels{l,:},'k','LineWidth',1,'ShowText','off');
+        c = colorbar; clim(inv_anom_lims(l,:)); c.FontSize = 16; c.TickLength = 0;
+        colormap(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0));
+        plot_land('map',[1 1 1]);
+        mlabel off; plabel off; gridm off;
+        figname = ['Figures/' file_date '/o2_inv_anom_2025_' labels{p} '_' layers{l}];
+        exportgraphics(gcf,[figname '.png']);
+        close;
+    end
     %% plot ensemble anomaly
     figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
@@ -734,7 +741,7 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/o2_ensemble_inv_anom_2025_' layers{l}];
+    figname = ['Figures/' file_date '/o2_ensemble_inv_anom_2025_' layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
     %% plot ensemble anomaly (statistical interpolation)
@@ -757,7 +764,7 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/o2_ensemble_inv_anom_SI_2025_' layers{l}];
+    figname = ['Figures/' file_date '/o2_ensemble_inv_anom_SI_2025_' layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
     %% plot ensemble anomaly (machine learning)
@@ -780,7 +787,7 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/o2_ensemble_inv_anom_2025_ML_' layers{l}];
+    figname = ['Figures/' file_date '/o2_ensemble_inv_anom_2025_ML_' layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
 end
@@ -828,7 +835,7 @@ for d = 1:length(depth_indices)
     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_OSM26_' ...
+    figname = ['Figures/' file_date '/ensemble_mean_o2_trend_OSM26_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.png']);
     close;
@@ -853,7 +860,7 @@ for d = 1:length(depth_indices)
     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_SI_' ...
+    figname = ['Figures/' file_date '/ensemble_mean_o2_trend_SI_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.png']);
     close;
@@ -878,7 +885,7 @@ for d = 1:length(depth_indices)
     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_ML_' ...
+    figname = ['Figures/' file_date '/ensemble_mean_o2_trend_ML_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.png']);
     close;    
@@ -887,7 +894,7 @@ end
 %% plot trends on depth layers
 for l = 1:length(layers)
     % plot ensemble mean trend
-    figure('Position',[100 100 1200 600],'Visible','on');
+    figure('Position',[100 100 1200 600],'Visible','off');
     worldmap(lat_lims,lon_lims);
     set(gca,'Children');
     title(['Oxygen Trend from ' layers{l} ...
@@ -909,122 +916,122 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_trend_levels{l,:}),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/file_date/ensemble_inv_o2_trend_' ...
+    figname = ['Figures/' file_date '/ensemble_inv_o2_trend_' ...
         layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
     % % plot ensemble mean trend (SI)
-    % figure('Position',[100 100 1200 600],'Visible','off');
-    % worldmap(lat_lims,lon_lims);
-    % set(gca,'Children');
-    % title(['SI Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
-    %     ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
-    % ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),si_indices),4,'omitnan');
-    % ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),si_indices),4,'omitnan');
-    % sum_pos = sum(o2_trend(:,:,depth_indices(d),si_indices) > 0,4);
-    % sum_neg = sum(o2_trend(:,:,depth_indices(d),si_indices) < 0,4);
-    % idx = sum_pos >= 4 | sum_neg >= 4;
-    % ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
-    % h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
-    % h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
-    % contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
-    %     trend_levels,'k','LineWidth',1,'ShowText','off');
-    % hatchfill2(h2,'cross');
-    % c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
-    % colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
-    % plot_land('map',[1 1 1]);
-    % mlabel off; plabel off; gridm off;
-    % figname = ['Figures/file_date/ensemble_mean_o2_trend_SI_' ...
-    %     num2str(depth(depth_indices(d)))];
-    % exportgraphics(gcf,[figname '.png']);
-    % figname = ['Figures/file_date/vectors/ensemble_mean_o2_trend_SI_ ' ...
-    %     num2str(depth(depth_indices(d)))];
-    % exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
-    % close;
-    % % plot ensemble mean trend (machine learning)
-    % figure('Position',[100 100 1200 600],'Visible','off');
-    % worldmap(lat_lims,lon_lims);
-    % set(gca,'Children');
-    % title(['ML Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
-    %     ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
-    % ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),ml_indices),4,'omitnan');
-    % ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),ml_indices),4,'omitnan');
-    % sum_pos = sum(o2_trend(:,:,depth_indices(d),ml_indices) > 0,4);
-    % sum_neg = sum(o2_trend(:,:,depth_indices(d),ml_indices) < 0,4);
-    % idx = sum_pos >= 3 | sum_neg >= 3;
-    % ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
-    % h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
-    % h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
-    % contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
-    %     trend_levels,'k','LineWidth',1,'ShowText','off');
-    % hatchfill2(h2,'cross');
-    % c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
-    % colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
-    % plot_land('map',[1 1 1]);
-    % mlabel off; plabel off; gridm off;
-    % figname = ['Figures/file_date/ensemble_mean_o2_trend_ML_' ...
-    %     num2str(depth(depth_indices(d)))];
-    % exportgraphics(gcf,[figname '.png']);
-    % figname = ['Figures/file_date/vectors/ensemble_mean_o2_trend_ML_ ' ...
-    %     num2str(depth(depth_indices(d)))];
-    % exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
-    % close;    
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    set(gca,'Children');
+    title(['SI Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+        ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
+    ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),si_indices),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),si_indices),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,depth_indices(d),si_indices) > 0,4);
+    sum_neg = sum(o2_trend(:,:,depth_indices(d),si_indices) < 0,4);
+    idx = sum_pos >= 4 | sum_neg >= 4;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
+    c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/' file_date '/ensemble_mean_o2_trend_SI_' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.png']);
+    figname = ['Figures/' file_date '/vectors/ensemble_mean_o2_trend_SI_ ' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+    close;
+    % plot ensemble mean trend (machine learning)
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    set(gca,'Children');
+    title(['ML Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+        ' meters (\mumol kg^{-1} dec.^{-1})'],'FontSize',20);
+    ens_mean_trend_sig = mean(o2_trend(:,:,depth_indices(d),ml_indices),4,'omitnan');
+    ens_mean_trend_non = mean(o2_trend(:,:,depth_indices(d),ml_indices),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,depth_indices(d),ml_indices) > 0,4);
+    sum_neg = sum(o2_trend(:,:,depth_indices(d),ml_indices) < 0,4);
+    idx = sum_pos >= 3 | sum_neg >= 3;
+    ens_mean_trend_sig(~idx) = NaN; ens_mean_trend_non(idx) = NaN;
+    h1=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]');
+    h2=pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend_non(1,:);ens_mean_trend_non]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend_sig(1,:);ens_mean_trend_sig]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    hatchfill2(h2,'cross');
+    c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/' file_date '/ensemble_mean_o2_trend_ML_' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.png']);
+    figname = ['Figures/' file_date '/vectors/ensemble_mean_o2_trend_ML_ ' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+    close;    
 end
 
 %% plot seasonal cycle
-% for d = 1:length(depth_indices)
-%     % plot each product cycle individually
-%     for p = 6:length(products)
-%         % calculate mean seasonal cycle
-% 
-%         % plot
-%         figure('Position',[100 100 1200 600]);
-%         worldmap(lat_lims,lon_lims);
-%         set(gca,'Children');
-%         title([labels{p} ' Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
-%             ' meters (\mumol kg^{-1}) dec.^{-1})'],'FontSize',20);
-%         temp_mean_trend = o2_trend(:,:,depth_indices(d),p);
-%         pcolorm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]');
-%         contourm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]',...
-%             trend_levels,'k','LineWidth',1,'ShowText','off');
-%         c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
-%         colormap(cmocean('balance',length(trend_levels)-1,'pivot',0));
-%         plot_land('map',[1 1 1]);
-%         mlabel off; plabel off; gridm off;
-%         figname = ['Figures/file_date/o2_trend_ ' labels{p} '_' ...
-%             num2str(depth(depth_indices(d)))];
-%         export_fig([figname '.png'],'-transparent');
-%         figname = ['Figures/file_date/vectors/o2_trend_ ' labels{p} '_' ...
-%             num2str(depth(depth_indices(d)))];
-%         exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
-%         close;
-%     end
-%     % plot ensemble mean trend
-%     figure('Position',[100 100 1200 600]);
-%     worldmap(lat_lims,lon_lims);
-%     set(gca,'Children');
-%     title(['Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
-%         ' meters (\mumol kg^{-1}) dec.^{-1})'],'FontSize',20);
-%     ens_mean_trend = mean(o2_trend(:,:,depth_indices(d),:),4,'omitnan');
-%     sum_pos = sum(o2_trend(:,:,depth_indices(d),:) > 0,4);
-%     sum_neg = sum(o2_trend(:,:,depth_indices(d),:) < 0,4);
-%     idx = sum_pos >= 7 | sum_neg >= 7; ens_mean_trend(~idx) = NaN;
-%     pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend(1,:);ens_mean_trend]');
-%     contourm(lat,[lon;lon(end)+1],[ens_mean_trend(1,:);ens_mean_trend]',...
-%         trend_levels,'k','LineWidth',1,'ShowText','off');
-%     stipplem(lat,lon,~idx','density',300);
-%     c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
-%     colormap(cmocean('balance',length(trend_levels),'pivot',0));
-%     plot_land('map',[1 1 1]);
-%     mlabel off; plabel off; gridm off;
-%     figname = ['Figures/file_date/ensemble_mean_o2_trend_ ' ...
-%         num2str(depth(depth_indices(d)))];
-%     export_fig([figname '.png'],'-transparent');
-%     figname = ['Figures/file_date/vectors/ensemble_mean_o2_trend_ ' ...
-%         num2str(depth(depth_indices(d)))];
-%     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
-%     close;
-% end
+for d = 1:length(depth_indices)
+    % plot each product cycle individually
+    for p = 6:length(products)
+        % calculate mean seasonal cycle
+
+        % plot
+        figure('Position',[100 100 1200 600],'Visible','off');
+        worldmap(lat_lims,lon_lims);
+        set(gca,'Children');
+        title([labels{p} ' Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+            ' meters (\mumol kg^{-1}) dec.^{-1})'],'FontSize',20);
+        temp_mean_trend = o2_trend(:,:,depth_indices(d),p);
+        pcolorm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]');
+        contourm(lat,[lon;lon(end)+1],[temp_mean_trend(1,:);temp_mean_trend]',...
+            trend_levels,'k','LineWidth',1,'ShowText','off');
+        c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+        colormap(cmocean('balance',length(trend_levels)-1,'pivot',0));
+        plot_land('map',[1 1 1]);
+        mlabel off; plabel off; gridm off;
+        figname = ['Figures/' file_date '/o2_trend_ ' labels{p} '_' ...
+            num2str(depth(depth_indices(d)))];
+        export_fig([figname '.png'],'-transparent');
+        figname = ['Figures/' file_date '/vectors/o2_trend_ ' labels{p} '_' ...
+            num2str(depth(depth_indices(d)))];
+        exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+        close;
+    end
+    % plot ensemble mean trend
+    figure('Position',[100 100 1200 600],'Visible','off');
+    worldmap(lat_lims,lon_lims);
+    set(gca,'Children');
+    title(['Oxygen Trend at ' num2str(depth(depth_indices(d))) ...
+        ' meters (\mumol kg^{-1}) dec.^{-1})'],'FontSize',20);
+    ens_mean_trend = mean(o2_trend(:,:,depth_indices(d),:),4,'omitnan');
+    sum_pos = sum(o2_trend(:,:,depth_indices(d),:) > 0,4);
+    sum_neg = sum(o2_trend(:,:,depth_indices(d),:) < 0,4);
+    idx = sum_pos >= 7 | sum_neg >= 7; ens_mean_trend(~idx) = NaN;
+    pcolorm(lat,[lon;lon(end)+1],[ens_mean_trend(1,:);ens_mean_trend]');
+    contourm(lat,[lon;lon(end)+1],[ens_mean_trend(1,:);ens_mean_trend]',...
+        trend_levels,'k','LineWidth',1,'ShowText','off');
+    stipplem(lat,lon,~idx','density',300);
+    c = colorbar; clim(trend_lims); c.FontSize = 16; c.TickLength = 0;
+    colormap(cmocean('balance',length(trend_levels),'pivot',0));
+    plot_land('map',[1 1 1]);
+    mlabel off; plabel off; gridm off;
+    figname = ['Figures/' file_date '/ensemble_mean_o2_trend_ ' ...
+        num2str(depth(depth_indices(d)))];
+    export_fig([figname '.png'],'-transparent');
+    figname = ['Figures/' file_date '/vectors/ensemble_mean_o2_trend_ ' ...
+        num2str(depth(depth_indices(d)))];
+    exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
+    close;
+end
 
 %% plot trend animation on depth levels
 % figure names
@@ -1178,7 +1185,7 @@ for l = 1:length(layers)
         ylabel({'O_{2} Inventory Anomaly';['(Pmol, ' layers{l} 'm)']});
         xlim([datenum(1967,12,31) datenum(2026,1,1)]);
         datetick('x','keeplimits');
-        figname = ['Figures/file_date/mean_inv_o2_' layers{l}];
+        figname = ['Figures/' file_date '/mean_inv_o2_' layers{l}];
         if included_products == 1
             legend([{''} labels(p_indices)],'NumColumns',3,'Location','southwest');
             export_fig([figname '.png'],'-transparent');
@@ -1210,7 +1217,7 @@ ylabel({'O_{2} Inventory';'Anomaly (%)'});
 xlim([datenum(1967,12,31) datenum(2026,1,1)]);
 datetick('x','keeplimits');
 legend([{''} layers],'NumColumns',3,'Location','southwest');
-figname = ['Figures/file_date/mean_inv_o2_' layers{l}];
+figname = ['Figures/' file_date '/mean_inv_o2_' layers{l}];
 export_fig([figname '.png'],'-transparent');
 
 %% plot OMZ timeseries
@@ -1230,7 +1237,7 @@ ylabel({'Global OMZ Volume';'Anomaly (%)'});
 xlim([datenum(1969,12,31) datenum(2024,1,1)]);
 datetick('x','keeplimits');
 legend([{''} labels{p_indices} {''}],'NumColumns',3,'Location','southeast');
-figname = ['Figures/file_date/mean_omz80_o2_' layers{l}];
+figname = ['Figures/' file_date '/mean_omz80_o2_' layers{l}];
 export_fig([figname '.png'],'-transparent');
 close;
 % Threshold 20 umol/kg
@@ -1249,7 +1256,7 @@ ylabel({'Global OMZ Volume';'Anomaly (%)'});
 xlim([datenum(1969,12,31) datenum(2024,1,1)]);
 datetick('x','keeplimits');
 legend([{''} labels{p_indices} {''}],'NumColumns',3,'Location','southeast');
-figname = ['Figures/file_date/mean_omz20_o2_' layers{l}];
+figname = ['Figures/' file_date '/mean_omz20_o2_' layers{l}];
 export_fig([figname '.png'],'-transparent');
 close;
 
@@ -1266,7 +1273,7 @@ for l = 1:length(layers)
     xlim([datenum(1969,12,31) datenum(2024,1,1)]);
     datetick('x','keeplimits');
     legend([{''} labels{6:7} labels{9:10}],'NumColumns',3,'Location','southwest');
-    figname = ['Figures/file_date/mean_inv_o2_EN4_vs_IAP_' layers{l}];
+    figname = ['Figures/' file_date '/mean_inv_o2_EN4_vs_IAP_' layers{l}];
     export_fig([figname '.png'],'-transparent');
     close;
 end
@@ -1412,11 +1419,9 @@ xticklabels({'1965' '' '1970' '' '1975' '' '1980' '' '1985' '' '1990' '' '1995' 
 legend([{''} labels],'NumColumns',3,'Location','southwest');
 hold off
 % save figure
-if stip; figname = 'Figures/file_date/SotC_Fig2_stipple';
-else; figname = 'Figures/file_date/SotC_Fig2'; end
+if stip; figname = ['Figures/' file_date '/SotC_Fig2_stipple'];
+else; figname = ['Figures/' file_date '/SotC_Fig2']; end
 exportgraphics(gcf,[figname '.png'],'Resolution',600);
-if stip; figname = 'Figures/file_date/vectors/SotC_Fig2_stipple';
-else; figname = 'Figures/file_date/vectors/SotC_Fig2'; end
 exportgraphics(gcf,[figname '.eps'],'Resolution',600,...
     'ContentType','vector');
 close;
@@ -1572,11 +1577,11 @@ text(-1.5,1000,{'ensemble';'mean [O_{2}]';'(\mumol kg^{-1})'},...
     'FontSize',8,'Color','r');
 text(-0.2,100,'(f)','FontSize',12.5);
 % save figure
-if stip; figname = 'Figures/file_date/SotC_Fig3_stipple';
-else; figname = 'Figures/file_date/SotC_Fig3'; end
+if stip; figname = ['Figures/' file_date '/SotC_Fig3_stipple'];
+else; figname = ['Figures/' file_date '/SotC_Fig3']; end
 exportgraphics(gcf,[figname '.png'],'Resolution',600);
-if stip; figname = 'Figures/file_date/vectors/SotC_Fig3_stipple';
-else; figname = 'Figures/file_date/vectors/SotC_Fig3'; end
+if stip; figname = ['Figures/' file_date '/vectors/SotC_Fig3_stipple'];
+else; figname = ['Figures/' file_date '/vectors/SotC_Fig3']; end
 exportgraphics(gcf,[figname '.eps'],'Resolution',600,...
     'ContentType','vector');
 close;
@@ -1697,11 +1702,11 @@ xlim([min(time) max(time)]); datetick('x','keeplimits');
 legend([{''} labels],'NumColumns',3,'Location','southwest');
 hold off
 % save figure
-if stip; figname = 'Figures/file_date/SotC_Fig2_stipple';
-else; figname = 'Figures/file_date/SotC_Fig2'; end
+if stip; figname = ['Figures/' file_date '/SotC_Fig2_stipple'];
+else; figname = ['Figures/' file_date '/SotC_Fig2']; end
 exportgraphics(gcf,[figname '.png'],'Resolution',600);
-if stip; figname = 'Figures/file_date/vectors/SotC_Fig2_stipple';
-else; figname = 'Figures/file_date/vectors/SotC_Fig2'; end
+if stip; figname = ['Figures/' file_date '/vectors/SotC_Fig2_stipple'];
+else; figname = ['Figures/' file_date '/vectors/SotC_Fig2']; end
 exportgraphics(gcf,[figname '.eps'],'Resolution',600,...
     'ContentType','vector');
 close;

@@ -1,14 +1,16 @@
 % this compares annual means of 
 
 %% file properties
-file_date = 'May2026';
+file_date = char(datetime('now','Format','MMMuuuu')); % e.g., 'Nov2026'
 fpath = '/fast4/o2/GODIP-DO/O2_Maps/';
 fname = ['GODIP-DO_SotC-2025_' file_date '.nc'];
+fname_dens = ['GODIP-DO_SotC-2025_' file_date '_density.nc'];
 % fname_seas = ['GODIP-DO_NCEI_SEASONAL_JDS_' file_date '.nc'];
 products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gobai_iap' ...
     'gt_ml' 'gt_nn_en4' 'gt_nn_iap' 'gt_rf_en4' 'gt_rf_iap' 'jingwei' 'han_zhou'};
 labels = {'NCEI' 'IAP' 'GT-OI' 'RB' 'SJTU-GR' 'GOBAI' 'GOBAI-IAP' 'GT-ML' ...
     'GT-NN-EN4' 'GT-NN-IAP' 'GT-RF-EN4' 'GT-RF-IAP' 'Jingwei' 'HZ'};
+products_dens = {'iap' 'en4'};
 
 %% import ncei dimensions
 datasets.ncei.name = 'w25_o_19652025_yearly_anomaly_NCEI.nc';
@@ -188,12 +190,35 @@ nccreate([fpath fname],'products','Dimensions',{'products' length(products)},'Da
 ncwrite([fpath fname],'products',products);
 disp('Common NetCDF file created.');
 
-%% interpolate annual means to common grid
-% pre-allocate
+%% create nc file for interpolated density
+if exist([fpath fname_dens],'file'); delete([fpath fname_dens]); end
+nccreate([fpath fname_dens],'lon','Dimensions',{'lon' length(common.lon)},'Format','netcdf4');
+ncwrite([fpath fname_dens],'lon',common.lon);
+nccreate([fpath fname_dens],'lat','Dimensions',{'lat' length(common.lat)});
+ncwrite([fpath fname_dens],'lat',common.lat);
+nccreate([fpath fname_dens],'depth','Dimensions',{'depth' length(common.depth)});
+ncwrite([fpath fname_dens],'depth',common.depth);
+nccreate([fpath fname_dens],'time','Dimensions',{'time' length(common.time)});
+ncwrite([fpath fname_dens],'time',common.time);
+% nccreate([fpath fname_dens],'months','Dimensions',{'months' 12});
+% ncwrite([fpath fname_dens],'months',(1:12)');
+% nccreate([fpath fname_dens],'products','Dimensions',{'products' length(products_dens)},'Datatype','string');
+% ncwrite([fpath fname_dens],'products',products_dens);
+for v = {'temperature_en4','salinity_en4','density_en4', ...
+        'temperature_iap','salinity_iap','density_iap'}
+    nccreate([fpath fname_dens],v{1}, ...
+        'Dimensions',{'lon' 'lat' 'depth' 'time'}, ...
+        'Datatype','single');
+end
+disp('Common NetCDF file for density created.');
+
+%% pre-allocate mask and years
 common.mask = true(length(common.lon),length(common.lat),...
     length(common.depth),length(common.time));
 years = datevec(common.time); years = years(:,1);
-% loop through and interpolate each product
+
+%% interpolate annual O2 means to common grid
+% loop through and interpolate each O2 product
 for p = 1:length(products)
     % pre-allocate
     common.(products{p}) = nan(length(common.lon),length(common.lat),...
@@ -258,6 +283,243 @@ end
 % save common mask
 nccreate([fpath fname],'mask','Dimensions',{'lon' 'lat' 'depth' 'time'});
 ncwrite([fpath fname],'mask',int8(common.mask));
+
+%% interpolate annual density means to common grid
+en4_paths = path_config('EN4','o2');
+en4_ref = fullfile(en4_paths.temp_path,'/EN.4.2.2.f.analysis.c14.200001.nc');
+en4_lon = ncread(en4_ref,'lon');
+en4_lat = ncread(en4_ref,'lat');
+en4_depth = ncread(en4_ref,'depth');
+
+% Sort EN4 longitudes and retain the ordering for the data arrays.
+en4_lon = convert_lon(en4_lon,'format','-180:180');
+[en4_lon,lon_idx] = sort(en4_lon);
+
+% Native EN4 grid and pressure for the GSW calculations.
+nlon_en4 = length(en4_lon);
+nlat_en4 = length(en4_lat);
+nz_en4 = length(en4_depth);
+[lon_en4_2d,lat_en4_2d] = ndgrid(en4_lon,en4_lat);
+lon_en4_3d = repmat(lon_en4_2d,1,1,nz_en4);
+lat_en4_3d = repmat(lat_en4_2d,1,1,nz_en4);
+depth_en4_3d = repmat(reshape(en4_depth,1,1,[]), ...
+    nlon_en4,nlat_en4,1);
+pressure_en4 = gsw_p_from_z(-depth_en4_3d,lat_en4_3d);
+
+% Process each year.
+for t = 1:length(common.time)
+    y = years(t);
+    monthly_files = cell(12,1);
+    % create list of monthly files for the year
+    for m = 1:12
+        monthly_files{m} = fullfile(en4_paths.temp_path,...
+        sprintf('EN.4.2.2.f.analysis.c14.%04d%02d.nc',y,m));
+    end
+    % add warning if one or more monthly files are missing
+    if ~all(cellfun(@isfile,monthly_files))
+        warning('Skipping EN4 %d: one or more monthly files are missing.',y);
+        continue
+    end
+    % pre-allocate sums and counts for averaging
+    temp_sum = zeros(nlon_en4,nlat_en4,nz_en4,'single');
+    sal_sum = zeros(nlon_en4,nlat_en4,nz_en4,'single');
+    rho_sum = zeros(nlon_en4,nlat_en4,nz_en4,'single');
+    count = zeros(nlon_en4,nlat_en4,nz_en4,'single');
+    % average monthly fields on the native EN4 grid
+    for m = 1:12
+        % read temperature and salinity from the monthly file
+        temp_src = single(ncread(monthly_files{m},'temperature')) - 273.15; % convert from kelvin to celsius
+        sal_src = single(ncread(monthly_files{m},'salinity'));
+        temp_src = temp_src(lon_idx,:,:);
+        sal_src = sal_src(lon_idx,:,:);
+        % calculate absolute salinity, conservative temperature, and density using GSW
+        sa = gsw_SA_from_SP(sal_src,pressure_en4, ...
+            lon_en4_3d,lat_en4_3d);
+        ct = gsw_CT_from_t(sa,temp_src,pressure_en4);
+        rho_month = single(gsw_rho(sa,ct,pressure_en4));
+        % accumulate sum for calculation ofannual mean, only where all three fields are finite
+        valid = isfinite(temp_src) & isfinite(sal_src) & isfinite(rho_month);
+        temp_sum(valid) = temp_sum(valid) + temp_src(valid);
+        sal_sum(valid) = sal_sum(valid) + sal_src(valid);
+        rho_sum(valid) = rho_sum(valid) + rho_month(valid);
+        count(valid) = count(valid) + 1;
+    end
+    % pre-allocate annual mean arrays
+    annual_temp_native = nan(nlon_en4,nlat_en4,nz_en4,'single');
+    annual_sal_native = nan(nlon_en4,nlat_en4,nz_en4,'single');
+    annual_rho_native = nan(nlon_en4,nlat_en4,nz_en4,'single');
+    valid = count > 0;
+    % calculate annual mean on native grid only where there is at least one valid month
+    annual_temp_native(valid) = temp_sum(valid)./count(valid);
+    annual_sal_native(valid) = sal_sum(valid)./count(valid);
+    annual_rho_native(valid) = rho_sum(valid)./count(valid);
+    % interpolate each annual mean to the common grid
+    annual_temp = single(interp3(en4_lat,en4_lon,en4_depth, ...
+        annual_temp_native,common.lat,common.lon',common.depth));
+    annual_sal = single(interp3(en4_lat,en4_lon,en4_depth, ...
+        annual_sal_native,common.lat,common.lon',common.depth));
+    annual_rho = single(interp3(en4_lat,en4_lon,en4_depth, ...
+        annual_rho_native,common.lat,common.lon',common.depth));
+    % write common grid annual means to the density NetCDF file
+    ncwrite([fpath fname_dens],'temperature_en4',annual_temp,[1 1 1 t]);
+    ncwrite([fpath fname_dens],'salinity_en4',annual_sal,[1 1 1 t]);
+    ncwrite([fpath fname_dens],'density_en4',annual_rho,[1 1 1 t]);
+    disp(['EN4 interpolated for ' num2str(y)]);
+end
+
+%% interpolate annual IAP temperature, salinity, and density means
+iap_paths = path_config('IAP','o2');
+iap_temp_ref = fullfile(iap_paths.temp_path, ...
+    'IAPv4_Temp_monthly_1_6000m_year_2025_month_09.nc');
+iap_sal_ref = fullfile(iap_paths.sal_path, ...
+    'IAPv2_Salinity_monthly_1_6000m_year_2025_month_09.nc');
+
+iap_lon = ncread(iap_temp_ref,'lon');
+iap_lat = ncread(iap_temp_ref,'lat');
+iap_depth = ncread(iap_temp_ref,'depth_std');
+iap_sal_lon = ncread(iap_sal_ref,'lon');
+if ~isequal(iap_lat,ncread(iap_sal_ref,'lat')) || ...
+        ~isequal(iap_depth,ncread(iap_sal_ref,'depth_std'))
+    error('IAP temperature and salinity latitude/depth grids do not match.');
+end
+
+% Sort IAP longitudes and retain the ordering for each data array.
+iap_lon = convert_lon(iap_lon,'format','-180:180');
+[iap_lon,lon_idx_iap] = sort(iap_lon);
+iap_sal_lon = convert_lon(iap_sal_lon,'format','-180:180');
+[iap_sal_lon,lon_idx_sal] = sort(iap_sal_lon);
+iap_sal_lon_ext = [iap_sal_lon(end)-360; iap_sal_lon; iap_sal_lon(1)+360];
+
+% Native IAP grid and pressure for the GSW calculations.
+nlon_iap = length(iap_lon);
+nlat_iap = length(iap_lat);
+nz_iap = length(iap_depth);
+[lon_iap_2d,lat_iap_2d] = ndgrid(iap_lon,iap_lat);
+lon_iap_3d = repmat(lon_iap_2d,1,1,nz_iap);
+lat_iap_3d = repmat(lat_iap_2d,1,1,nz_iap);
+depth_iap_3d = repmat(reshape(iap_depth,1,1,[]), ...
+    nlon_iap,nlat_iap,1);
+pressure_iap = gsw_p_from_z(-depth_iap_3d,lat_iap_3d);
+
+% Process each year.
+for t = 1:length(common.time)
+    y = years(t);
+    monthly_temp_files = cell(12,1);
+    monthly_sal_files = cell(12,1);
+    for m = 1:12
+        monthly_temp_files{m} = fullfile(iap_paths.temp_path,sprintf( ...
+            'IAPv4_Temp_monthly_1_6000m_year_%04d_month_%02d.nc',y,m));
+        monthly_sal_files{m} = fullfile(iap_paths.sal_path,sprintf( ...
+            'IAPv2_Salinity_monthly_1_6000m_year_%04d_month_%02d.nc',y,m));
+    end
+    if ~all(cellfun(@isfile,monthly_temp_files)) || ...
+            ~all(cellfun(@isfile,monthly_sal_files))
+        warning('Skipping IAP %d: one or more monthly files are missing.',y);
+        continue
+    end
+
+    temp_sum = zeros(nlon_iap,nlat_iap,nz_iap,'single');
+    sal_sum = zeros(nlon_iap,nlat_iap,nz_iap,'single');
+    rho_sum = zeros(nlon_iap,nlat_iap,nz_iap,'single');
+    count = zeros(nlon_iap,nlat_iap,nz_iap,'single');
+
+    % Average monthly fields on the native IAP grid.
+    for m = 1:12
+        % IAP fields are stored depth x lon x lat; convert to lon x lat x depth.
+        temp_src = permute(single(ncread(monthly_temp_files{m},'temp')),[2 3 1]);
+        fill_warning = warning('off', ...
+            'MATLAB:imagesci:netcdf:fillValueTypeMismatch');
+        sal_src = permute(single(ncread(monthly_sal_files{m},'salinity')),[2 3 1]);
+        warning(fill_warning);
+        temp_src(temp_src == 999) = NaN;
+        sal_src(sal_src == 999) = NaN;
+        temp_src = temp_src(lon_idx_iap,:,:);
+        sal_src = sal_src(lon_idx_sal,:,:);
+        % Salinity longitudes are offset by 0.5 degrees; remap to the
+        % temperature grid, adding cyclic points across the longitude seam.
+        sal_src_ext = cat(1,sal_src(end,:,:),sal_src,sal_src(1,:,:));
+        sal_src = interp3(iap_lat,iap_sal_lon_ext,iap_depth,sal_src_ext, ...
+            iap_lat,iap_lon',iap_depth);
+
+        % IAP salinity is already Absolute Salinity (g/kg).
+        ct = gsw_CT_from_t(sal_src,temp_src,pressure_iap);
+        rho_month = single(gsw_rho(sal_src,ct,pressure_iap));
+
+        valid = isfinite(temp_src) & isfinite(sal_src) & isfinite(rho_month);
+        temp_sum(valid) = temp_sum(valid) + temp_src(valid);
+        sal_sum(valid) = sal_sum(valid) + sal_src(valid);
+        rho_sum(valid) = rho_sum(valid) + rho_month(valid);
+        count(valid) = count(valid) + 1;
+    end
+
+    annual_temp_native = nan(nlon_iap,nlat_iap,nz_iap,'single');
+    annual_sal_native = nan(nlon_iap,nlat_iap,nz_iap,'single');
+    annual_rho_native = nan(nlon_iap,nlat_iap,nz_iap,'single');
+    valid = count > 0;
+    annual_temp_native(valid) = temp_sum(valid)./count(valid);
+    annual_sal_native(valid) = sal_sum(valid)./count(valid);
+    annual_rho_native(valid) = rho_sum(valid)./count(valid);
+
+    % Interpolate each annual mean to the common grid.
+    annual_temp = single(interp3(iap_lat,iap_lon,iap_depth, ...
+        annual_temp_native,common.lat,common.lon',common.depth));
+    annual_sal = single(interp3(iap_lat,iap_lon,iap_depth, ...
+        annual_sal_native,common.lat,common.lon',common.depth));
+    annual_rho = single(interp3(iap_lat,iap_lon,iap_depth, ...
+        annual_rho_native,common.lat,common.lon',common.depth));
+
+    ncwrite([fpath fname_dens],'temperature_iap',annual_temp,[1 1 1 t]);
+    ncwrite([fpath fname_dens],'salinity_iap',annual_sal,[1 1 1 t]);
+    ncwrite([fpath fname_dens],'density_iap',annual_rho,[1 1 1 t]);
+    disp(['IAP interpolated for ' num2str(y)]);
+end
+
+%% test plotting of density fields
+ncfile = [fpath fname_dens];
+plot_year = 1994;
+target_depth = 500;  % metres; plots the nearest common-grid level
+lon = ncread(ncfile,'lon');
+lat = ncread(ncfile,'lat');
+depth = ncread(ncfile,'depth');
+time_parts = datevec(ncread(ncfile,'time'));
+t_idx = find(time_parts(:,1) == plot_year,1);
+if isempty(t_idx)
+    error('Year %d is not in the output time coordinate.',plot_year);
+end
+[~,z_idx] = min(abs(depth - target_depth));
+fprintf('Plotting %d m (nearest to requested %d m)\n', ...
+    depth(z_idx),target_depth);
+vars = {'temperature_en4','salinity_en4','density_en4';...
+    'temperature_iap','salinity_iap','density_iap'};
+titles = {'EN4, Temperature (deg C)','EN4, Salinity','EN4, Density (kg m^{-3})';...
+    'IAP, Temperature (deg C)','IAP, Salinity','IAP, Density (kg m^{-3})'};
+zlim = {[0 30], [33 40], [1025 1031];...
+    [0 30], [33 40], [1025 1031]};
+for p = 1:size(vars,1)
+    figure('Name',sprintf('Density Fields for %d m in %d',depth(z_idx),plot_year), ...
+        'NumberTitle','off','Position',[100 100 1600 400]);
+    for v = 1:size(vars,2)
+        field = squeeze(ncread(ncfile,vars{p,v}, ...
+            [1 1 z_idx t_idx],[Inf Inf 1 1]));
+        subplot(1,3,v);
+        pcolor(lon,lat,field');
+        shading flat;
+        axis tight;
+        xlabel('Longitude');
+        ylabel('Latitude');
+        title(sprintf('%s, %d, %g m',titles{p,v},plot_year,depth(z_idx)));
+        colorbar;
+        caxis(zlim{p,v});
+        vals = field(isfinite(field));
+        if isempty(vals)
+            warning('%s has no finite values for this year and depth.',vars{p,v});
+        else
+            fprintf('%s range: %.3f to %.3f\n',vars{p,v},min(vals),max(vals));
+        end
+    end
+    exportgraphics(gcf,sprintf('Figures/%s/density_plot_%s_%d_%dm.png',file_date,vars{p,v},plot_year,depth(z_idx)));
+    close;
+end
 
 %% interpolate to seasonal cycle for ML products
 % % pre-allocate
