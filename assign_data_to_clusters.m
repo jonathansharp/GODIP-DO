@@ -17,10 +17,11 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 
 %% load combined data
 try % try loading matlab file (normal)
-    load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+    load(godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.mat']));
 catch % if error, load NetCDF
-    fname = ['O2/Data/' vrs '_data_' num2str(start_year) ...
-        '_' num2str(end_year) '.nc'];
+    fname = godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.nc']);
     nc_inf = ncinfo(fname);
     for v = 1:length(nc_inf.Variables)
         all_data.(nc_inf.Variables(v).Name) = ...
@@ -30,7 +31,7 @@ end
 
 %% assign data points and probabilities to clusters
 % load GMM model
-load([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' date_str]);
+load([param_props.data_path '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' date_str]);
 % transform to normalized arrays
 predictor_matrix = [];
 for v = 1:length(clust_vars)
@@ -45,8 +46,8 @@ for c = 1:size(p,2)
     all_data_clusters.(['c' num2str(c)]) = p(:,c);
 end
 % save data clusters
-if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
+if ~isfolder([param_props.data_path '/Data']); mkdir([param_props.data_path '/Data']); end
+save([param_props.data_path '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
 % display information
 disp(['data assigned to ' num2str(num_clusters) ' clusters']);

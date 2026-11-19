@@ -81,7 +81,7 @@ elseif strcmp(alg_type,'GBM')
 end
 
 %% create directory and file names
-alg_dir = [param_props.dir_name '/Models/' vrs '/' dir_base]; % vrs should be 'WOD' or the name of a CMIP model
+alg_dir = [param_props.data_path '/Models/' vrs '/' dir_base]; % vrs should be 'WOD' or the name of a CMIP model
 alg_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     alg_fnames(c) = ...
@@ -328,7 +328,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     probs_matrix = single(nan(length(TS.Temperature_array),num_clusters));
 
     % apply GMM model for RFROM basegrid
-    load([param_props.dir_name '/Data/GMM_' vrs '_' ...
+    load([param_props.data_path '/Data/GMM_' vrs '_' ...
         num2str(num_clusters) '/model_' date_str],'gmm','C','S');
     % transform to normalized arrays
     predictor_matrix = [];
@@ -348,7 +348,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
 
         % load GMM cluster probabilities for this cluster and month, and convert to array
         % load GMM model
-        load([param_props.dir_name '/Data/GMM_' vrs '_' ...
+        load([param_props.data_path '/Data/GMM_' vrs '_' ...
             num2str(num_clusters) '/model_' date_str],'gmm','C','S');
         % transform predictors to normalized arrays
         predictor_matrix = [];

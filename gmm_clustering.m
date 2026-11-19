@@ -20,10 +20,11 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 
 %% load data
 try % try loading matlab file (normal)
-    load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+    load(godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.mat']));
 catch % if error, load NetCDF
-    fname = ['O2/Data/' vrs '_data_' num2str(start_year) ...
-        '_' num2str(end_year) '.nc'];
+    fname = godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.nc']);
     nc_inf = ncinfo(fname);
     for v = 1:length(nc_inf.Variables)
         all_data.(nc_inf.Variables(v).Name) = ...
@@ -53,15 +54,15 @@ gmm = fitgmdist(X_norm,num_clusters,...
     'CovarianceType','diagonal',...
     'SharedCovariance',true,'Replicates',10);
 % save GMM model
-if ~isfolder([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters)])
-    mkdir([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters)]);
+if ~isfolder([param_props.data_path '/Data/GMM_' vrs '_' num2str(num_clusters)])
+    mkdir([param_props.data_path '/Data/GMM_' vrs '_' num2str(num_clusters)]);
 end
-save([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' date_str],...
+save([param_props.data_path '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' date_str],...
     'gmm','num_clusters','C','S','-v7.3');
 clear gmm C S
 toc
 
-% load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) '/model_' date_str]);
+% load([param_props.data_path '/Data/GMM_' num2str(num_clusters) '/model_' date_str]);
 
 % %% assign grid cells and probabilities to clusters
 % folder_name = [fpaths.param_path 'GMM_' num2str(num_clusters)];
@@ -95,7 +96,7 @@ toc
 % create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
 % 
 % % load GMM model
-% load([param_props.dir_name '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' ...
+% load([param_props.data_path '/Data/GMM_' vrs '_' num2str(num_clusters) '/model_' ...
 %     date_str],'gmm','C','S');
 % 
 % % set up parallel pool

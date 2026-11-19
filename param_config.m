@@ -3,6 +3,7 @@
 function param_props = param_config(p)
 
 if strcmp(p,'o2')
+    param_props.data_path = godip_data_path('O2');
     param_props.dir_name = 'O2'; % directory name
     param_props.file_name = 'o2'; % file name
     param_props.fig_name = 'oxygen'; % for saving figures
@@ -17,6 +18,7 @@ if strcmp(p,'o2')
     param_props.dec_points = 2;
     param_props.cmap = cmocean('ice');
 elseif strcmp(p,'no3')
+    param_props.data_path = godip_data_path('NO3');
     param_props.dir_name = 'NO3'; % directory name
     param_props.file_name = 'no3'; % file name
     param_props.fig_name = 'nitrate'; % for saving figures
@@ -31,6 +33,7 @@ elseif strcmp(p,'no3')
     param_props.dec_points = 2;
     param_props.cmap = flipud(cmocean('speed'));
 elseif strcmp(p,'dic')
+    param_props.data_path = godip_data_path('DIC');
     param_props.dir_name = 'DIC'; % directory name
     param_props.file_name = 'dic'; % file name
     param_props.fig_name = 'dic'; % for saving figures

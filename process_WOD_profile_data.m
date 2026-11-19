@@ -3,10 +3,10 @@ function all_data = process_WOD_profile_data(y1,y2,vrs)
 % load WOD profile data
 if strcmp(vrs,'WOD23')
     nc_label = 'NCEI';
-    folder = 'WOD_Profiles_Data';
+    folder = godip_data_path('WOD_Profiles_data');
 elseif strcmp(vrs,'WOD25')
     nc_label = 'WOD25';
-    folder = 'WOD25_Profiles_Data';
+    folder = godip_data_path('WOD25_Profiles_Data');
 end
 types = {'OSD' 'CTD' 'PFL'};
 
@@ -130,7 +130,7 @@ all_data.Oxygen_uncorrected = all_data.Oxygen;
 idx_float = all_data.type == 3;
 
 % adjust float data according to GOBAI-O2 deep and shallow float correction (June 2026)
-load('../GOBAI/O2/Data/float_corr_Jun-2026_D_A');
+load(fullfile('/data2/GOBAI/o2/Data','float_corr_Jun-2026_D_A'));
 idx_deep = all_data.pressure >= max_delta_pressure;
 idx_shal = all_data.pressure < max_delta_pressure;
 corr_fac = nan(size(all_data.Oxygen_sat));
@@ -145,5 +145,6 @@ all_data.Oxygen(idx_float) = all_data.Oxygen(idx_float) - corr_fac(idx_float);
 % end
 
 % save data
-save(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data','-v7.3');
+save(godip_data_path('O2','Data',[vrs '_data_' num2str(y1) '_' num2str(y2)]),...
+    'all_data','-v7.3');
 

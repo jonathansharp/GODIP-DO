@@ -13,10 +13,11 @@ function plot_data_by_cluster(param_props,file_date,...
 %% plot data points by cluster
 % load combined data
 try % try loading matlab file (normal)
-    load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+    load(godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.mat']));
 catch % if error, load NetCDF
-    fname = ['O2/Data/' vrs '_data_' num2str(start_year) ...
-        '_' num2str(end_year) '.nc'];
+    fname = godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.nc']);
     nc_inf = ncinfo(fname);
     for v = 1:length(nc_inf.Variables)
         all_data.(nc_inf.Variables(v).Name) = ...
@@ -24,7 +25,7 @@ catch % if error, load NetCDF
     end
 end
 % load cluster data
-load([param_props.dir_name '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
+load([param_props.data_path '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 % define pressure axis
 pressures = sort(unique(all_data.depth));
@@ -53,9 +54,9 @@ parfor p = 1:length(pressures)
     c.FontSize = 12;
     c.TickLength = 0;
     % save figure
-    dname = [param_props.dir_name '/Figures/Clusters/' vrs '_c' ...
+    dname = [param_props.data_path '/Figures/Clusters/' vrs '_c' ...
         num2str(num_clusters) '_' file_date float_file_ext];
-    if ~isfolder([pwd '/' dname]); mkdir(dname); end
+    if ~isfolder(dname); mkdir(dname); end
     export_fig(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png'],...
         '-transparent','-silent');
     close
@@ -81,9 +82,9 @@ parfor p = 1:length(pressures)
     %     c.FontSize = 12;
     %     c.TickLength = 0;
     %     % save figure
-    %     dname = [param_props.dir_name '/Figures/Clusters/' vrs '_c' ...
+    %     dname = [param_props.data_path '/Figures/Clusters/' vrs '_c' ...
     %         num2str(num_clusters) '_' file_date float_file_ext];
-    %     if ~isfolder([pwd '/' dname]); mkdir(dname); end
+    %     if ~isfolder(dname); mkdir(dname); end
     %     export_fig([dname '/clustered_data_probability_c' ...
     %         num2str(clst) '_' num2str(pressures(p)) '.png'],...
     %         '-transparent','-silent');

@@ -88,7 +88,7 @@ c = colorbar(h,'Position',[0.93 0.168 0.022 0.7]);  % attach colorbar to h
 colormap(c,parula);
 clim(h,[0 350]);
 % export
-export_fig(gcf,'O2/Figures/mean_comparisons.png','-transparent');
+export_fig(gcf,godip_data_path('O2','Figures','mean_comparisons.png'),'-transparent');
 close
 
 %% plot differences
@@ -131,7 +131,7 @@ c = colorbar(h,'Position',[0.93 0.168 0.022 0.7]);  % attach colorbar to h
 colormap(c,cmocean('balance'));
 clim(h,[-50 50]);
 % export
-export_fig(gcf,'O2/Figures/mean_diff_comparisons.png','-transparent');
+export_fig(gcf,godip_data_path('O2','Figures','mean_diff_comparisons.png'),'-transparent');
 close
 
 %% plot profile
@@ -160,7 +160,7 @@ legend({'WOA' 'GT' 'GOBAI'},'Location','southeast');
 xlim([130 250]);
 ylabel('Depth (m)');
 xlabel('[O_{2}] (\mumol kg^{-1})');
-export_fig(gcf,'O2/Figures/profile_comparisons.png','-transparent');
+export_fig(gcf,godip_data_path('O2','Figures','profile_comparisons.png'),'-transparent');
 close
 % plot global mean delta O2
 figure; hold on;
@@ -172,7 +172,7 @@ legend({'GT-WOA' 'GOBAI-WOA'},'Location','southeast');
 xlim([-4 4]);
 ylabel('Depth (m)');
 xlabel('\Delta[O_{2}] (\mumol kg^{-1})');
-export_fig(gcf,'O2/Figures/profile_diff_comparisons.png','-transparent');
+export_fig(gcf,godip_data_path('O2','Figures','profile_diff_comparisons.png'),'-transparent');
 close
 
 %% plot timeseries
@@ -242,7 +242,7 @@ plot(double(datenum(1950,1,1)+gobai.time),gobai_no_float_o2_ts,'LineWidth',2);
 datetick('x');
 ylabel('[O_{2}] (\mumol kg^{-1})');
 legend({'GT' 'UW (no adjustment)' 'UW (w/ adjustment)' 'UW (w/ adjustment 100)' 'UW (no float data)'})
-export_fig(gcf,'O2/Figures/timeseries_comparisons.png','-transparent');
+export_fig(gcf,godip_data_path('O2','Figures','timeseries_comparisons.png'),'-transparent');
 close
 
 %% plot climatology

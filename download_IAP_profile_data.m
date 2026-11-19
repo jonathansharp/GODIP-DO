@@ -4,7 +4,7 @@ for y = 1961:2025
     for m = 1:12
         try
             fname = ['CAS_DO_profiles_' num2str(y) '_' num2str(m) '.nc'];
-            websave(['IAP_Profiles_Data/' fname],[url fname]);
+            websave(godip_data_path('IAP_Profiles_Data',fname),[url fname]);
         catch
             % do nothing
         end

@@ -2,7 +2,8 @@
 function plot_data_hist(y1,y2,vrs)
 
 % load data
-load(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data');
+load(godip_data_path('O2','Data',[vrs '_data_' num2str(y1) '_' num2str(y2)]),...
+    'all_data');
 
 % establish figure
 figure('visible','off');
@@ -61,5 +62,5 @@ else
 end
 
 % save figure
-export_fig(['O2/Figures/' vrs '_dataset_histogram_' num2str(y1) '_' ...
-    num2str(y2) '.png'],'-transparent','-silent');
+export_fig(godip_data_path('O2','Figures',[vrs '_dataset_histogram_' ...
+    num2str(y1) '_' num2str(y2) '.png']),'-transparent','-silent');

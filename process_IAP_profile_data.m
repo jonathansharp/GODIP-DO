@@ -2,7 +2,7 @@ function all_data = process_IAP_profile_data(y1,y2,vrs)
 
 % load WOD profile data
 nc_label = 'IAP';
-folder = 'IAP_Profiles_Data';
+folder = godip_data_path('IAP_Profiles_Data');
 types = {'OSD' 'CTD' 'PFL'};
 
 % for oxygen
@@ -161,7 +161,7 @@ all_data.day_cos = cos((2.*pi.*all_data.day_of_year)/365.25);
 % idx_shal = all_data.pressure < max_delta_pressure;
 
 % % adjust float data according to GOBAI-O2 deep and shallow float correction (June 2026)
-% load('../GOBAI/O2/Data/float_corr_Jun-2026_D_A');
+% load(fullfile('/data2/GOBAI/o2/Data','float_corr_Jun-2026_D_A'));
 % corr_fac = nan(size(all_data.Oxygen_sat));
 % corr_fac(idx_float & idx_deep) = all_data.pressure(idx_float & idx_deep).*slp_deep + int_deep;
 % corr_fac(idx_float & idx_shal) = all_data.pressure(idx_float & idx_shal).*slp_shal + int_shal;
@@ -174,4 +174,5 @@ all_data.day_cos = cos((2.*pi.*all_data.day_of_year)/365.25);
 % end
 
 % save data
-save(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data','-v7.3');
+save(godip_data_path('O2','Data',[vrs '_data_' num2str(y1) '_' num2str(y2)]),...
+    'all_data','-v7.3');

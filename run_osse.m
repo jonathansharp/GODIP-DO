@@ -21,7 +21,7 @@ if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
 if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% load data
-load([param_props.dir_name '/Data/wod_data_' num2str(start_year) ...
+load([param_props.data_path '/Data/wod_data_' num2str(start_year) ...
     '_' num2str(end_year)],'all_data');
 
 %% loop through each model

@@ -11,10 +11,11 @@ function kfold_split_data(param_props,file_date,float_file_ext,...
     start_year,end_year,glodap_only,num_clusters,num_folds,thresh,vrs)
 
 %% load combined data
-load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year)],'all_data');
+load(godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+    '_' num2str(end_year)]),'all_data');
 
 %% load data clusters
-load([param_props.dir_name '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
+load([param_props.data_path '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% remove float data for GLODAP only test
@@ -72,15 +73,15 @@ training_data_points_table = array2table(training_data_points,...
     'RowNames',sprintfc('%d',1:num_folds),'VariableNames',clusters);
 test_data_points_table = array2table(test_data_points,...
     'RowNames',sprintfc('%d',1:num_folds),'VariableNames',clusters);
-if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-writetable(training_data_points_table,[param_props.dir_name '/Data/training_data_points_' datestr(date) '.csv']);
-writetable(test_data_points_table,[param_props.dir_name '/Data/test_data_points_' datestr(date) '.csv']);
+if ~isfolder([param_props.data_path '/Data']); mkdir([param_props.data_path '/Data']); end
+writetable(training_data_points_table,[param_props.data_path '/Data/training_data_points_' datestr(date) '.csv']);
+writetable(test_data_points_table,[param_props.data_path '/Data/test_data_points_' datestr(date) '.csv']);
 clear training_data_points training_data_points_table idx_train
 clear test_data_points test_data_points_table idx_test
 
 %% save k-fold evaluation indices
-if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) '_' num2str(num_folds) '_'...
+if ~isfolder([param_props.data_path '/Data']); mkdir([param_props.data_path '/Data']); end
+save([param_props.data_path '/Data/k_fold_data_indices_' num2str(num_clusters) '_' num2str(num_folds) '_'...
     file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx','-v7.3');
 
 %% display information

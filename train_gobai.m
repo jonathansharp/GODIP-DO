@@ -82,10 +82,11 @@ end
 
 %% load combined data
 try % try loading matlab file (normal)
-    load(['O2/Data/' vrs '_data_' num2str(start_year) '_' num2str(end_year) '.mat']);
+    load(godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.mat']));
 catch % if error, load NetCDF
-    fname = ['O2/Data/' vrs '_data_' num2str(start_year) ...
-        '_' num2str(end_year) '.nc'];
+    fname = godip_data_path('O2','Data',[vrs '_data_' num2str(start_year) ...
+        '_' num2str(end_year) '.nc']);
     nc_inf = ncinfo(fname);
     for v = 1:length(nc_inf.Variables)
         all_data.(nc_inf.Variables(v).Name) = ...
@@ -94,12 +95,12 @@ catch % if error, load NetCDF
 end
 
 %% load data clusters
-load([param_props.dir_name '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
+load([param_props.data_path '/Data/' vrs '_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
-    load([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
+    load([param_props.data_path '/Data/k_fold_data_indices_' num2str(num_clusters) ...
         '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
         'num_folds','train_idx','test_idx');
 else
@@ -117,7 +118,7 @@ if glodap_only
 end
 
 %% create directory and file names
-alg_dir = [param_props.dir_name '/Models/' vrs '/' dir_base];
+alg_dir = [param_props.data_path '/Models/' vrs '/' dir_base];
 alg_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
@@ -131,8 +132,8 @@ end
 
 %% variables for k-fold test
 if num_folds > 1
-    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
-    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    kfold_dir = [param_props.data_path '/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    fig_dir = [param_props.data_path '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
@@ -226,7 +227,7 @@ fprintf(['Median Error = ' num2str(alg_med_err) ' ' param_props.units '\n']);
 fprintf(['RMSE = ' num2str(alg_rmse) ' ' param_props.units '\n']);
 fprintf(['Median Abs. Error = ' num2str(alg_med_abs_err) ' ' param_props.units '\n']);
 % save predicted data
-if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
+if ~isfolder(kfold_dir); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'alg_output','alg_rmse',...
     'alg_med_err','alg_mean_err','-v7.3');
 clear alg_output alg_rmse alg_med_err alg_mean_err
@@ -255,7 +256,7 @@ c.Label.String = 'log_{10}(Bin Counts)';
 text(param_props.edges(1)+(2/5)*(param_props.edges(end)-param_props.edges(1)),...
     param_props.edges(1)+(1/10)*(param_props.edges(end)-param_props.edges(1)),...
     ['RMSE = ' num2str(round(alg_rmse,param_props.dec_points)) ' ' param_props.units],'fontsize',12);
-if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+if ~isfolder(fig_dir); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_1]);
 % clean up
 clear counts bin_centers h p myColorMap
@@ -292,7 +293,7 @@ c.Label.String = ['Average Absolute \Delta' param_props.label];
 c.FontSize = 22;
 c.TickLength = 0;
 mlabel off; plabel off;
-if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+if ~isfolder(fig_dir); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_2]);
 % clean up
 clear land cmap c
@@ -441,7 +442,7 @@ else
 end
 
 % save test model and output for each cluster
-if ~isfolder([pwd '/' alg_dir]); mkdir(alg_dir); end
+if ~isfolder(alg_dir); mkdir(alg_dir); end
 if any(all_data_clusters.clusters(obs_index_train) == c)
     if num_folds > 1
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type,output,'output',obs_index_test,'obs_index_test');

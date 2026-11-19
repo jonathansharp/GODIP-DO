@@ -76,11 +76,13 @@ for t = 1:12:length(time)
     date = datevec(datenum(1850,1,double(time(t+11))));
     disp([model_names{m} ' subsampled for ' num2str(date(1)) '.'])
     % make directory to save netcdf
-    if ~exist('O2/Data','dir'); mkdir('O2/Data'); end
+    data_dir = godip_data_path('O2','Data');
+    if ~exist(data_dir,'dir'); mkdir(data_dir); end
     % define variables to save
     nc_vars = fieldnames(data);
     % define filename and delete if it exists
-    filename = ['O2/Data/' model_names{m} '_' num2str(date(1)) '_data.nc'];
+    filename = godip_data_path('O2','Data',...
+        [model_names{m} '_' num2str(date(1)) '_data.nc']);
     if exist(filename,'file'); delete(filename); end
     % save variables in netcdf
     for v = 1:length(nc_vars)
@@ -119,7 +121,8 @@ end
 % add annual arrays to all data structure
 for t = 1:12:length(time)
     date = datevec(datenum(1850,1,double(time(t+11))));
-    filename = ['O2/Data/' model_names{m} '_' num2str(date(1)) '_data.nc'];
+    filename = godip_data_path('O2','Data',...
+        [model_names{m} '_' num2str(date(1)) '_data.nc']);
     for v = 1:length(nc_vars)
         all_data.(nc_vars{v}) = [all_data.(nc_vars{v});...
             ncread(filename,nc_vars{v})];
@@ -170,15 +173,16 @@ geoshow(land,'FaceColor',rgb('grey'));
 c=colorbar; 
 cmap = [1,1,1;parula]; colormap(cmap);
 mlabel off; plabel off;
-if ~exist(['O2/Figures/' model_names{m}],'dir'); mkdir(['O2/Figures/' model_names{m}]); end
-export_fig(gcf,['O2/Figures/' model_names{m} '/data_density_fig.png']); hold off;
+fig_dir = godip_data_path('O2','Figures',model_names{m});
+if ~exist(fig_dir,'dir'); mkdir(fig_dir); end
+export_fig(gcf,fullfile(fig_dir,'data_density_fig.png')); hold off;
 close;
 
 % define variables to save
 nc_vars = fieldnames(all_data);
 % define filename and delete if it exists
-filename = ['O2/Data/' model_names{m} '_data_' num2str(start_year) ...
-    '_' num2str(end_year) '.nc'];
+filename = godip_data_path('O2','Data',[model_names{m} '_data_' ...
+    num2str(start_year) '_' num2str(end_year) '.nc']);
 if exist(filename,'file'); delete(filename); end
 % save all subsampled data in netcdf
 for v = 1:length(nc_vars)

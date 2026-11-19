@@ -22,7 +22,8 @@ a=tiledlayout(h,3,1,'TileSpacing','tight','Padding','tight');
 % datasets.ncei.param_name = 'o_anom_an';
 
 % load processes profile data
-load(['O2/Data/' vrs '_data_' num2str(y1) '_' num2str(y2)],'all_data');
+load(godip_data_path('O2','Data',[vrs '_data_' num2str(y1) '_' num2str(y2)]),...
+    'all_data');
 
 % plot map
 ax1 = nexttile(a,1,[2 1]);

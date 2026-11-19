@@ -61,8 +61,8 @@ tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 %% plot frames
 parfor d = 1:length(depths)
     % create folder for figures
-    dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
-    if ~isfolder([pwd '/' dname]); mkdir(dname); end
+    dname = [param_props.data_path '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
+    if ~isfolder(dname); mkdir(dname); end
     % define directory for file
     if strcmp(alg_type,'FFNN')
         dir_base = [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
