@@ -1,5 +1,8 @@
 function process_cmip_model(model,fpath,snap_date,start_year,rlz,grid_label,grid_type)
 
+figures_path = godip_data_path('Figures');
+figure_dir = fullfile(figures_path,model);
+
 %% process date
 start_month = 1;
 date_str = num2str(snap_date);
@@ -469,8 +472,8 @@ c.Label.String = ['Temperature ' char(176) 'C'];
 c.FontSize = 12;
 c.TickLength = 0;
 mlabel off; plabel off;
-if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-export_fig(['Figures/' model '/temp_20m.png'],'-transparent');
+if ~isfolder(figure_dir); mkdir(figure_dir); end
+export_fig(fullfile(figure_dir,'temp_20m.png'),'-transparent');
 close
 
 %% Plot S at 20 m
@@ -494,8 +497,8 @@ colormap(cmocean('haline',12));
 c.Label.String = 'Salinity';
 c.FontSize = 12;
 mlabel off; plabel off;
-if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-export_fig(['Figures/' model '/sal_20m.png'],'-transparent');
+if ~isfolder(figure_dir); mkdir(figure_dir); end
+export_fig(fullfile(figure_dir,'sal_20m.png'),'-transparent');
 close
 
 %% Plot O2 at 20 m
@@ -519,8 +522,8 @@ colormap(cmocean('ice',14));
 c.Label.String = '[O_{2}] (\mumol kg^{-1})';
 c.FontSize = 12;
 mlabel off; plabel off;
-if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-export_fig(['Figures/' model '/oxy_20m.png'],'-transparent');
+if ~isfolder(figure_dir); mkdir(figure_dir); end
+export_fig(fullfile(figure_dir,'oxy_20m.png'),'-transparent');
 close
 
 end
@@ -771,7 +774,7 @@ function plot_global_timeseries(lat,lon,depth,dpth_bnds,time,var,varname,var_lab
     datetick('x','keeplimits');
     ylabel([var_label ' (' units ')']);
     % save global mean plot
-    if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-    export_fig(['Figures/' model '/' varname '_global_mean.png'],'-transparent');
+    if ~isfolder(figure_dir); mkdir(figure_dir); end
+    export_fig(fullfile(figure_dir,[varname '_global_mean.png']),'-transparent');
     close
 end

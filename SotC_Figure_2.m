@@ -1,6 +1,11 @@
 %% plot SoTC Figure 2
 % load data
 file_date = 'Nov2026';
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+if ~isfolder(fullfile(figures_path,'vectors'))
+    mkdir(fullfile(figures_path,'vectors'));
+end
 fpath = '/fast4/o2/GODIP-DO/';
 load([fpath 'O2_Maps/' 'GODIP-DO_SotC-2025_STATS_' file_date '.mat']);
 % create figure
@@ -105,10 +110,10 @@ xlim([min(time) max(time)]); datetick('x','keeplimits');
 legend([{''} labels],'NumColumns',3,'Location','southwest');
 hold off
 % save figure
-if stip; figname = 'Figures/SotC_Fig2_stipple';
-else; figname = 'Figures/SotC_Fig2'; end
+if stip; figname = fullfile(figures_path,'SotC_Fig2_stipple');
+else; figname = fullfile(figures_path,'SotC_Fig2'); end
 exportgraphics(gcf,[figname '.png']);
-if stip; figname = 'Figures/vectors/SotC_Fig2_stipple';
-else; figname = 'Figures/vectors/SotC_Fig2'; end
+if stip; figname = fullfile(figures_path,'vectors/SotC_Fig2_stipple');
+else; figname = fullfile(figures_path,'vectors/SotC_Fig2'); end
 exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 close;

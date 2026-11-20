@@ -11,6 +11,8 @@ function train_gobai(alg_type,param_props,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_train,...
     snap_date,start_year,end_year,vrs,varargin)
 
+figures_path = fullfile(param_props.data_path,'Figures');
+
 %% set defaults and process optional input arguments
 num_folds = 1;
 glodap_only = 0;
@@ -133,7 +135,8 @@ end
 %% variables for k-fold test
 if num_folds > 1
     kfold_dir = [param_props.data_path '/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
-    fig_dir = [param_props.data_path '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    fig_dir = fullfile(figures_path,'KFold',alg_type, ...
+        ['c' num2str(num_clusters) '_' file_date float_file_ext]);
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];

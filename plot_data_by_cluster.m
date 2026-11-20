@@ -10,6 +10,8 @@
 function plot_data_by_cluster(param_props,file_date,...
     float_file_ext,num_clusters,numWorkers_predict,start_year,end_year,vrs)
 
+figures_path = fullfile(param_props.data_path,'Figures');
+
 %% plot data points by cluster
 % load combined data
 try % try loading matlab file (normal)
@@ -54,8 +56,8 @@ parfor p = 1:length(pressures)
     c.FontSize = 12;
     c.TickLength = 0;
     % save figure
-    dname = [param_props.data_path '/Figures/Clusters/' vrs '_c' ...
-        num2str(num_clusters) '_' file_date float_file_ext];
+    dname = fullfile(figures_path,'Clusters',[vrs '_c' ...
+        num2str(num_clusters) '_' file_date float_file_ext]);
     if ~isfolder(dname); mkdir(dname); end
     export_fig(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png'],...
         '-transparent','-silent');
@@ -82,7 +84,7 @@ parfor p = 1:length(pressures)
     %     c.FontSize = 12;
     %     c.TickLength = 0;
     %     % save figure
-    %     dname = [param_props.data_path '/Figures/Clusters/' vrs '_c' ...
+    %     dname = [figures_path '/Clusters/' vrs '_c' ...
     %         num2str(num_clusters) '_' file_date float_file_ext];
     %     if ~isfolder(dname); mkdir(dname); end
     %     export_fig([dname '/clustered_data_probability_c' ...

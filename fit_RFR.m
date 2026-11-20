@@ -1,5 +1,8 @@
 function train_sum = fit_RFR(type,OXY,basin_index,all_oxy_RF,importance)
 
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+
 % define basins
 [basins] = basin_split(type);
 
@@ -65,7 +68,8 @@ for b = 1:length(basins)
         xlabel('Predictor') ;
         ylabel('Out-of-Bag Feature Importance');
         xticklabels(OXY.all.Properties.VariableNames(all_oxy_RF(1:end-1)));
-        exportgraphics(gcf,['Figures/RFR_importance_' type '_' basins{b} '.png']);
+        exportgraphics(gcf,fullfile(figures_path, ...
+            ['RFR_importance_' type '_' basins{b} '.png']));
         close
     end
     

@@ -1,6 +1,9 @@
 function subsample_cmip_model(param_props,data,model,fpath,file_date,...
     snap_date,float_file_ext,start_year,rlz,float_ext,glodap_ext,ctd_ext)
 
+figures_path = godip_data_path('Figures');
+figure_dir = fullfile(figures_path,model);
+
 %% process date
 date_str = num2str(snap_date);
 
@@ -146,9 +149,9 @@ cmap = cmocean('ice'); cmap(1,:) = 1; colormap(cmap)
 c.Label.String = ['Average Gridded ' param_props.fig_name];
 c.FontSize = 12;
 mlabel off; plabel off;
-if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_' ...
-    float_ext glodap_ext ctd_ext '_20m.png'],'-transparent');
+if ~isfolder(figure_dir); mkdir(figure_dir); end
+export_fig(fullfile(figure_dir,['subsampled_' param_props.fig_name '_' ...
+    float_ext glodap_ext ctd_ext '_20m.png']),'-transparent');
 close
 
 %% save data

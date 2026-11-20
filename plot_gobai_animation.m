@@ -4,6 +4,8 @@
 function plot_gobai_animation(param_props,param_path,base_grid,num_clusters,...
     alg_type,file_date,float_file_ext,numWorkers_predict,varargin)
 
+figures_path = fullfile(param_props.data_path,'Figures');
+
 %% set depths
 depths = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
@@ -61,7 +63,8 @@ tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 %% plot frames
 parfor d = 1:length(depths)
     % create folder for figures
-    dname = [param_props.data_path '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
+    dname = fullfile(figures_path,'GOBAI', ...
+        [base_grid '_' alg_type '_c' num2str(num_clusters)]);
     if ~isfolder(dname); mkdir(dname); end
     % define directory for file
     if strcmp(alg_type,'FFNN')

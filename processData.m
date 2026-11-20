@@ -230,9 +230,12 @@ icons(6).Children.MarkerSize = 10;
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',[.7 .7 .7]);
 mlabel off; plabel off;
-if ~exist('Figures','dir'); mkdir('Figures'); end
-if ~exist('Figures/Data','dir'); mkdir('Figures/Data'); end
-exportgraphics(gcf,'Figures/Data/data_locations.png');
+figures_path = godip_data_path('Figures');
+if ~exist(figures_path,'dir'); mkdir(figures_path); end
+if ~exist(fullfile(figures_path,'Data'),'dir')
+    mkdir(fullfile(figures_path,'Data'));
+end
+exportgraphics(gcf,fullfile(figures_path,'Data','data_locations.png'));
 close
 
 %% Plot all data distribution (do this either way)
@@ -252,7 +255,7 @@ icons(6).Children.MarkerSize = 10;
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',[.7 .7 .7]);
 mlabel off; plabel off;
-exportgraphics(gcf,'Figures/Data/data_locations_all.jpg');
+exportgraphics(gcf,fullfile(figures_path,'Data','data_locations_all.jpg'));
 close
 
 %% Clean up and save data

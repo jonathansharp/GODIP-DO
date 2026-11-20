@@ -3,6 +3,11 @@
 
 % parameters
 close all;
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+if ~isfolder(fullfile(figures_path,'vectors'))
+    mkdir(fullfile(figures_path,'vectors'));
+end
 fpath = '/fast4/o2/GODIP-DO/O2_Maps/';
 vrs = 'WOD25';
 y1 = 1965;
@@ -99,8 +104,8 @@ legend({'OSD' 'CTD' 'PFL[A]' 'PFL[D]'},'Location','northwest',...
     'FontSize',14,'NumColumns',4);
 
 % save figure
-exportgraphics(gcf,['Figures/SotC_Fig1_' vrs '_dataset_histogram_' num2str(y1) '_' ...
+exportgraphics(gcf,[fullfile(figures_path,'SotC_Fig1_') vrs '_dataset_histogram_' num2str(y1) '_' ...
     num2str(y2) '.png'],'Resolution',600);
-exportgraphics(gcf,['Figures/vectors/SotC_Fig1_' vrs '_dataset_histogram_' num2str(y1) '_' ...
+exportgraphics(gcf,[fullfile(figures_path,'vectors/SotC_Fig1_') vrs '_dataset_histogram_' num2str(y1) '_' ...
     num2str(y2) '.eps'],'Resolution',600,'ContentType','vector');
 close;

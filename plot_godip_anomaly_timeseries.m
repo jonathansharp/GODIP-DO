@@ -106,7 +106,10 @@ text(datenum(enso_year(5),7,1),max(yr)-200,...
 % plot(apo_time,o2_atm_yr,'LineWidth',2);
 
 %% export figure
-exportgraphics(gcf,['Figures/global_' products{p} '_anomaly.png']);
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+exportgraphics(gcf,fullfile(figures_path, ...
+    ['global_' products{p} '_anomaly.png']));
 close
 
 end

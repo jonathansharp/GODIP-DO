@@ -1,4 +1,9 @@
 %% plot SoTC Figure 3
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+if ~isfolder(fullfile(figures_path,'vectors'))
+    mkdir(fullfile(figures_path,'vectors'));
+end
 figure('Position',[100 100 1200 1000]);
 SotC_fig = tiledlayout(3,2,'TileSpacing','tight','Padding','none');
 ax1 = nexttile; % anomaly at 10
@@ -151,8 +156,8 @@ annotation('textbox',[0.51 .64 0 0],'string','(d)','FontSize',16);
 annotation('textbox',[0.01 .3 0 0],'string','(e)','FontSize',16);
 annotation('textbox',[0.51 .3 0 0],'string','(f)','FontSize',16);
 % save figure
-figname = 'Figures/SotC_Fig3';
+figname = fullfile(figures_path,'SotC_Fig3');
 export_fig([figname '.png'],'-transparent');
-figname = 'Figures/vectors/SotC_Fig3';
+figname = fullfile(figures_path,'vectors/SotC_Fig3');
 exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 close;

@@ -1,6 +1,11 @@
 %% plot SoTC Figure 3
 % load data
 file_date = 'Jan2026';
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+if ~isfolder(fullfile(figures_path,'vectors'))
+    mkdir(fullfile(figures_path,'vectors'));
+end
 fpath = '/fast4/o2/GODIP-DO/';
 load([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_STATS_' file_date '.mat']);
 % create figure
@@ -117,10 +122,10 @@ ylabel('Depth (m)');
 xlim([min(time) max(time)]); datetick('x','keeplimits'); 
 hold off;
 % save figure
-if stip; figname = 'Figures/SotC_Fig3_stipple';
-else; figname = 'Figures/SotC_Fig3'; end
+if stip; figname = fullfile(figures_path,'SotC_Fig3_stipple');
+else; figname = fullfile(figures_path,'SotC_Fig3'); end
 exportgraphics(gcf,[figname '.png']);
-if stip; figname = 'Figures/vectors/SotC_Fig3_stipple';
-else; figname = 'Figures/vectors/SotC_Fig3'; end
+if stip; figname = fullfile(figures_path,'vectors/SotC_Fig3_stipple');
+else; figname = fullfile(figures_path,'vectors/SotC_Fig3'); end
 exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 close;

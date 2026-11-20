@@ -2,6 +2,10 @@
 
 %% file properties
 file_date = char(datetime('now','Format','MMMuuuu')); % e.g., 'Nov2026'
+figures_path = godip_data_path('Figures');
+if ~isfolder(fullfile(figures_path,file_date))
+    mkdir(fullfile(figures_path,file_date));
+end
 fpath = '/fast4/o2/GODIP-DO/O2_Maps/';
 fname = ['GODIP-DO_SotC-2025_' file_date '.nc'];
 fname_dens = ['GODIP-DO_SotC-2025_' file_date '_density.nc'];
@@ -517,7 +521,8 @@ for p = 1:size(vars,1)
             fprintf('%s range: %.3f to %.3f\n',vars{p,v},min(vals),max(vals));
         end
     end
-    exportgraphics(gcf,sprintf('Figures/%s/density_plot_%s_%d_%dm.png',file_date,vars{p,v},plot_year,depth(z_idx)));
+    exportgraphics(gcf,fullfile(figures_path,file_date, ...
+        sprintf('density_plot_%s_%d_%dm.png',vars{p,v},plot_year,depth(z_idx))));
     close;
 end
 

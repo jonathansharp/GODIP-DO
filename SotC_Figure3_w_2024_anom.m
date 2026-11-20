@@ -1,6 +1,11 @@
 %% plot SoTC Figure 3
 % load data
 file_date = 'Jan2026';
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+if ~isfolder(fullfile(figures_path,'vectors'))
+    mkdir(fullfile(figures_path,'vectors'));
+end
 fpath = '/fast4/o2/GODIP-DO/';
 load([fpath 'O2_Maps/' 'GODIP-DO_NCEI_JDS_STATS_' file_date '.mat']);
 % create figure
@@ -107,10 +112,10 @@ annotation('textbox',[0.083 0.614 0 0],'string','c','FontSize',14,'FontWeight','
 annotation('textbox',[0.55 0.614 0 0],'string','d','FontSize',14,'FontWeight','bold');
 annotation('textbox',[0.07 0.363 0 0],'string','e','FontSize',14,'FontWeight','bold');
 % save figure
-if stip; figname = 'Figures/SotC_Fig3_stipple_w2024';
-else; figname = 'Figures/SotC_Fig3_w2024'; end
+if stip; figname = fullfile(figures_path,'SotC_Fig3_stipple_w2024');
+else; figname = fullfile(figures_path,'SotC_Fig3_w2024'); end
 export_fig([figname '.png'],'-transparent');
-if stip; figname = 'Figures/vectors/SotC_Fig3_stipple_w2024';
-else; figname = 'Figures/vectors/SotC_Fig3_w2024'; end
+if stip; figname = fullfile(figures_path,'vectors/SotC_Fig3_stipple_w2024');
+else; figname = fullfile(figures_path,'vectors/SotC_Fig3_w2024'); end
 exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 close;

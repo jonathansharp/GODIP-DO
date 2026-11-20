@@ -2,10 +2,15 @@
 close all;
 
 %% file and plot properties
-file_date = 'Feb2026';
+file_date = 'Nov2026';
+figures_path = godip_data_path('Figures');
+if ~isfolder(figures_path); mkdir(figures_path); end
+if ~isfolder(fullfile(figures_path,'vectors'))
+    mkdir(fullfile(figures_path,'vectors'));
+end
 fpath = '/fast4/o2/GODIP-DO/';
 fpath_EN4 = '/med2/';
-compilation.name = ['GODIP-DO_NCEI_JDS_' file_date '.nc'];
+compilation.name = ['GODIP-DO_SotC-2025_' file_date '.nc'];
 % products = {'ncei' 'iap' 'gt_oi' 'rb' 'sjtu_gr' 'gobai' 'gt_ml' 'jingwei' 'han_zhou'};
 products = ncread([fpath 'O2_Maps/' compilation.name],'products');
 labels = {'NCEI' 'IAP' 'GT-OI' 'UTAS' 'SJTU-GR' 'GOBAI' 'GT-ML' 'Jingwei' 'SJTU-HZ'};
@@ -396,10 +401,10 @@ for d = 1:length(depth_indices)
         colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
         plot_land('map',[1 1 1]);
         mlabel off; plabel off; gridm off;
-        figname = ['Figures/mean_o2_' labels{p} '_' ...
+        figname = [fullfile(figures_path,'mean_o2_') labels{p} '_' ...
             num2str(depth(depth_indices(d)))];
         export_fig([figname '.png'],'-transparent');
-        figname = ['Figures/vectors/mean_o2_' labels{p} '_' ...
+        figname = [fullfile(figures_path,'vectors/mean_o2_') labels{p} '_' ...
             num2str(depth(depth_indices(d)))];
         exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
         close;
@@ -418,10 +423,10 @@ for d = 1:length(depth_indices)
     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_' ...
+    figname = [fullfile(figures_path,'ensemble_mean_o2_') ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/vectors/ensemble_mean_o2_' ...
+    figname = [fullfile(figures_path,'vectors/ensemble_mean_o2_') ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
@@ -444,7 +449,7 @@ for l = 1:length(layers)
         colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
         plot_land('map',[1 1 1]);
         mlabel off; plabel off; gridm off;
-        figname = ['Figures/mean_o2_inv_' labels{p} '_' layers{l}];
+        figname = [fullfile(figures_path,'mean_o2_inv_') labels{p} '_' layers{l}];
         export_fig([figname '.png'],'-transparent');
         close;
     end
@@ -462,7 +467,7 @@ for l = 1:length(layers)
     colormap(customcolormap([0;1],[0.7 0 1; 1 1 0],length(o2_levels)-1));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_inv_' layers{l}];
+    figname = [fullfile(figures_path,'ensemble_mean_o2_inv_') layers{l}];
     export_fig([figname '.png'],'-transparent');
     close;
 end
@@ -497,7 +502,7 @@ for d = 1:length(depth_indices)
         colormap(cmocean('balance',length(anom_levels)-1,'pivot',0));
         plot_land('map',[1 1 1]);
         mlabel off; plabel off; gridm off;
-        figname = ['Figures/o2_anom_' num2str(year(anom_idx)) '_' labels{p} '_' ...
+        figname = [fullfile(figures_path,'o2_anom_') num2str(year(anom_idx)) '_' labels{p} '_' ...
             num2str(depth(depth_indices(d)))];
         export_fig([figname '.png'],'-transparent');
         close;
@@ -514,10 +519,10 @@ for d = 1:length(depth_indices)
     colormap(cmocean('balance',length(anom_levels)-1,'pivot',0));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/o2_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = [fullfile(figures_path,'o2_ensemble_anom_') num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/vectors/o2_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = [fullfile(figures_path,'vectors/o2_ensemble_anom_') num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
@@ -539,10 +544,10 @@ for d = 1:length(depth_indices)
     colormap(cmocean('balance',length(temp_anom_levels)-1,'pivot',0));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/temp_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = [fullfile(figures_path,'temp_ensemble_anom_') num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     export_fig([figname '.png'],'-transparent');
-    figname = ['Figures/vectors/temp_ensemble_anom_' num2str(year(anom_idx)) '_' ...
+    figname = [fullfile(figures_path,'vectors/temp_ensemble_anom_') num2str(year(anom_idx)) '_' ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
     close;
@@ -577,7 +582,7 @@ for l = 1:length(layers)
         colormap(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0));
         plot_land('map',[1 1 1]);
         mlabel off; plabel off; gridm off;
-        figname = ['Figures/o2_inv_anom_2025_' labels{p} '_' layers{l}];
+        figname = [fullfile(figures_path,'o2_inv_anom_2025_') labels{p} '_' layers{l}];
         exportgraphics(gcf,[figname '.png']);
         close;
     end
@@ -601,7 +606,7 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/o2_ensemble_inv_anom_2025_' layers{l}];
+    figname = [fullfile(figures_path,'o2_ensemble_inv_anom_2025_') layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
     %% plot ensemble anomaly (statistical interpolation)
@@ -624,7 +629,7 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/o2_ensemble_inv_anom_SI_2025_' layers{l}];
+    figname = [fullfile(figures_path,'o2_ensemble_inv_anom_SI_2025_') layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
     %% plot ensemble anomaly (machine learning)
@@ -647,7 +652,7 @@ for l = 1:length(layers)
     colormap(flipud(cmocean('balance',length(inv_anom_levels{l,:})-1,'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/o2_ensemble_inv_anom_2025_ML_' layers{l}];
+    figname = [fullfile(figures_path,'o2_ensemble_inv_anom_2025_ML_') layers{l}];
     exportgraphics(gcf,[figname '.png']);
     close;
 end
@@ -669,7 +674,7 @@ for d = 1:length(depth_indices)
     %     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     %     plot_land('map',[1 1 1]);
     %     mlabel off; plabel off; gridm off;
-    %     figname = ['Figures/o2_trend_OSM26_' labels{p} '_' ...
+    %     figname = [fullfile(figures_path,'o2_trend_OSM26_') labels{p} '_' ...
     %         num2str(depth(depth_indices(d)))];
     %     exportgraphics(gcf,[figname '.png']);
     %     close;
@@ -695,7 +700,7 @@ for d = 1:length(depth_indices)
     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_OSM26_' ...
+    figname = [fullfile(figures_path,'ensemble_mean_o2_trend_OSM26_') ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.png']);
     close;
@@ -720,7 +725,7 @@ for d = 1:length(depth_indices)
     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_SI_' ...
+    figname = [fullfile(figures_path,'ensemble_mean_o2_trend_SI_') ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.png']);
     close;
@@ -745,7 +750,7 @@ for d = 1:length(depth_indices)
     colormap(flipud(cmocean('balance',length(trend_levels),'pivot',0)));
     plot_land('map',[1 1 1]);
     mlabel off; plabel off; gridm off;
-    figname = ['Figures/ensemble_mean_o2_trend_ML_' ...
+    figname = [fullfile(figures_path,'ensemble_mean_o2_trend_ML_') ...
         num2str(depth(depth_indices(d)))];
     exportgraphics(gcf,[figname '.png']);
     close;    
@@ -753,9 +758,9 @@ end
 
 %% plot trend animation on depth levels
 % figure names
-fname_all = 'Figures/ensemble_mean_o2_trend_OSM26_anim.gif';
-fname_si = 'Figures/ensemble_mean_o2_trend_si_OSM26_anim.gif';
-fname_ml = 'Figures/ensemble_mean_o2_trend_ml_OSM26_anim.gif';
+fname_all = fullfile(figures_path,'ensemble_mean_o2_trend_OSM26_anim.gif');
+fname_si = fullfile(figures_path,'ensemble_mean_o2_trend_si_OSM26_anim.gif');
+fname_ml = fullfile(figures_path,'ensemble_mean_o2_trend_ml_OSM26_anim.gif');
 % establish figres
 for d = 1:length(depth)
     % plot ensemble mean trend
@@ -835,9 +840,9 @@ end
 
 %% plot standard deviation animation on depth levels
 % figure names
-fname_all = 'Figures/ensemble_mean_o2_stdev_OSM26_anim.gif';
-fname_si = 'Figures/ensemble_mean_o2_stdev_si_OSM26_anim.gif';
-fname_ml = 'Figures/ensemble_mean_o2_stdev_ml_OSM26_anim.gif';
+fname_all = fullfile(figures_path,'ensemble_mean_o2_stdev_OSM26_anim.gif');
+fname_si = fullfile(figures_path,'ensemble_mean_o2_stdev_si_OSM26_anim.gif');
+fname_ml = fullfile(figures_path,'ensemble_mean_o2_stdev_ml_OSM26_anim.gif');
 % establish figres
 for d = 1:length(depth)
     % plot ensemble mean trend
@@ -884,10 +889,10 @@ end
 %         colormap(cmocean('balance',length(trend_levels)-1,'pivot',0));
 %         plot_land('map',[1 1 1]);
 %         mlabel off; plabel off; gridm off;
-%         figname = ['Figures/o2_trend_ ' labels{p} '_' ...
+%         figname = [fullfile(figures_path,'o2_trend_ ') labels{p} '_' ...
 %             num2str(depth(depth_indices(d)))];
 %         export_fig([figname '.png'],'-transparent');
-%         figname = ['Figures/vectors/o2_trend_ ' labels{p} '_' ...
+%         figname = [fullfile(figures_path,'vectors/o2_trend_ ') labels{p} '_' ...
 %             num2str(depth(depth_indices(d)))];
 %         exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 %         close;
@@ -910,10 +915,10 @@ end
 %     colormap(cmocean('balance',length(trend_levels),'pivot',0));
 %     plot_land('map',[1 1 1]);
 %     mlabel off; plabel off; gridm off;
-%     figname = ['Figures/ensemble_mean_o2_trend_ ' ...
+%     figname = [fullfile(figures_path,'ensemble_mean_o2_trend_ ') ...
 %         num2str(depth(depth_indices(d)))];
 %     export_fig([figname '.png'],'-transparent');
-%     figname = ['Figures/vectors/ensemble_mean_o2_trend_ ' ...
+%     figname = [fullfile(figures_path,'vectors/ensemble_mean_o2_trend_ ') ...
 %         num2str(depth(depth_indices(d)))];
 %     exportgraphics(gcf,[figname '.eps'],'ContentType','vector');
 %     close;
@@ -954,7 +959,7 @@ for l = 2%1:length(layers)
         ylabel({'O_{2} Inventory Anomaly';['(Pmol, ' layers{l} 'm)']});
         xlim([datenum(1964,12,31) datenum(2026,1,1)]);
         datetick('x','keeplimits'); ylim([-3 2]);
-        figname = ['Figures/mean_inv_o2_OSM26_' layers{l}];
+        figname = [fullfile(figures_path,'mean_inv_o2_OSM26_') layers{l}];
         if included_products == 1
             legend([{''} labels],'NumColumns',3,'Location','southwest');
             export_fig([figname '.png'],'-transparent');
@@ -1109,11 +1114,11 @@ xticklabels({'1965' '' '1970' '' '1975' '' '1980' '' '1985' '' '1990' '' '1995' 
 legend([{''} labels],'NumColumns',3,'Location','southwest');
 hold off
 % save figure
-if stip; figname = 'Figures/SotC_Fig2_stipple';
-else; figname = 'Figures/SotC_Fig2'; end
+if stip; figname = fullfile(figures_path,'SotC_Fig2_stipple');
+else; figname = fullfile(figures_path,'SotC_Fig2'); end
 exportgraphics(gcf,[figname '.png'],'Resolution',600);
-if stip; figname = 'Figures/vectors/SotC_Fig2_stipple';
-else; figname = 'Figures/vectors/SotC_Fig2'; end
+if stip; figname = fullfile(figures_path,'vectors/SotC_Fig2_stipple');
+else; figname = fullfile(figures_path,'vectors/SotC_Fig2'); end
 exportgraphics(gcf,[figname '.eps'],'Resolution',600,...
     'ContentType','vector');
 close;
@@ -1268,11 +1273,11 @@ text(-1.5,1000,{'ensemble';'mean';'(\mumol kg^{-1})'},...
     'FontSize',8,'Color','r');
 text(-1.9,-30,'f)','FontSize',12.5);
 % save figure
-if stip; figname = 'Figures/SotC_Fig3_stipple';
-else; figname = 'Figures/SotC_Fig3'; end
+if stip; figname = fullfile(figures_path,'SotC_Fig3_stipple');
+else; figname = fullfile(figures_path,'SotC_Fig3'); end
 exportgraphics(gcf,[figname '.png'],'Resolution',600);
-if stip; figname = 'Figures/vectors/SotC_Fig3_stipple';
-else; figname = 'Figures/vectors/SotC_Fig3'; end
+if stip; figname = fullfile(figures_path,'vectors/SotC_Fig3_stipple');
+else; figname = fullfile(figures_path,'vectors/SotC_Fig3'); end
 exportgraphics(gcf,[figname '.eps'],'Resolution',600,...
     'ContentType','vector');
 close;
@@ -1393,11 +1398,11 @@ xlim([min(time) max(time)]); datetick('x','keeplimits');
 legend([{''} labels],'NumColumns',3,'Location','southwest');
 hold off
 % save figure
-if stip; figname = 'Figures/SotC_Fig2_stipple';
-else; figname = 'Figures/SotC_Fig2'; end
+if stip; figname = fullfile(figures_path,'SotC_Fig2_stipple');
+else; figname = fullfile(figures_path,'SotC_Fig2'); end
 exportgraphics(gcf,[figname '.png'],'Resolution',600);
-if stip; figname = 'Figures/vectors/SotC_Fig2_stipple';
-else; figname = 'Figures/vectors/SotC_Fig2'; end
+if stip; figname = fullfile(figures_path,'vectors/SotC_Fig2_stipple');
+else; figname = fullfile(figures_path,'vectors/SotC_Fig2'); end
 exportgraphics(gcf,[figname '.eps'],'Resolution',600,...
     'ContentType','vector');
 close;
